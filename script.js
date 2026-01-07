@@ -7,7 +7,6 @@ let userData = null;
 async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
-
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (authError) return alert("Помилка: " + authError.message);
 
@@ -17,7 +16,7 @@ async function signIn() {
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         updateUI();
-        getKzLimit(); // Виклик лімітів кайф зони
+        getKzLimit();
         setInterval(refreshUserData, 5000);
     }
 }
@@ -28,7 +27,6 @@ function updateUI() {
     document.getElementById('user-balance').innerText = userData.balance;
     document.getElementById('user-idd').innerText = userData.idd;
 
-    // Відображення VIP
     const vipIcon = document.getElementById('vip-icon');
     if (userData.is_vip_user) {
         vipIcon.style.display = 'inline';
@@ -39,82 +37,65 @@ function updateUI() {
     }
 }
 
-async function buyCurrency() {
+function buyCurrency() {
     const amount = parseFloat(document.getElementById('exchange-amount').value);
-    if (!amount || amount <= 0) return alert("Введіть кількість");
-
+    if (!amount || amount <= 0) return alert("Введіть кількість лісничків!");
     const rate = userData.is_vip_user ? 0.3 : 0.5;
-    const cost = amount * rate;
-
-    if (userData.balance < cost) return alert(`Треба ${cost.toFixed(2)} ₴`);
-
-    const { error } = await supabaseClient.from('bank').update({ balance: userData.balance - cost }).eq('user_id', userData.user_id);
-    if (!error) {
-        await supabaseClient.from('service_requests').insert([{
-            user_id: userData.user_id, idd: userData.idd,
-            service: `💰 Обмін: ${amount} 🌲`, price: cost
-        }]);
-        userData.balance -= cost;
-        updateUI();
-        alert(`Придбано!`);
-    }
+    const totalCost = (amount * rate).toFixed(2);
+    alert(`До сплати за ${amount}🌲: ${totalCost} ₴. Перенаправляю на Приват24...`);
+    window.open("https://next.privat24.ua/send/ijak6", "_blank");
 }
 
 async function processOrder(name, price) {
-    if (userData.balance < price) return alert("Мало коштів");
+    if (userData.balance < price) return alert("Мало гривень на балансі!");
     const { error } = await supabaseClient.from('bank').update({ balance: userData.balance - price }).eq('user_id', userData.user_id);
     if (!error) {
         await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
         userData.balance -= price;
         updateUI();
-        alert("Замовлення прийнято!");
+        alert(`Сплачено: ${name}`);
     }
-}
-
-async function getKzLimit() {
-    const { data, error } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
-    const display = document.getElementById('kz-slots-display');
-    if (data && display) {
-        display.innerText = data.value;
-    } else {
-        if (display) display.innerText = "0";
-    }
-}
-
-async function refreshUserData() {
-    if (!userData) return;
-    const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
-    if (data) { userData = data; updateUI(); }
 }
 
 async function sendTransferRequest() {
     const to = document.getElementById('target-idd').value;
     const am = document.getElementById('transfer-amount').value;
     await supabaseClient.from('transfer_requests').insert([{ from_user: userData.user_id, to_idd: parseInt(to), amount: parseFloat(am), status: 'pending' }]);
-    alert("Запит надіслано");
+    alert("Запит надіслано!");
     toggleModal('transfer-modal', false);
 }
 
 async function viewTransferRequests() {
     const { data } = await supabaseClient.from('transfer_requests').select('*').eq('to_idd', userData.idd).eq('status', 'pending');
     const cont = document.getElementById('requests-container');
-    cont.innerHTML = data?.length ? '' : 'Запитів немає';
+    cont.innerHTML = data?.length ? '' : 'Вхідних запитів немає';
     data?.forEach(req => {
         const div = document.createElement('div');
         div.className = 'request-item';
-        div.innerHTML = `<p>${req.amount} ₴</p><button class="btn" onclick="confirmTransfer(${req.id}, ${req.amount}, '${req.from_user}')">OK</button>`;
+        div.innerHTML = `<p>Сума: ${req.amount} ₴</p><button class="btn" onclick="confirmTransfer(${req.id}, ${req.amount}, '${req.from_user}')">ПІДТВЕРДИТИ</button>`;
         cont.appendChild(div);
     });
     toggleModal('requests-list-modal', true);
 }
 
 async function confirmTransfer(id, amount, fId) {
-    if (userData.balance < amount) return alert("Мало грошей");
+    if (userData.balance < amount) return alert("Мало грошей!");
     await supabaseClient.from('bank').update({ balance: userData.balance - amount }).eq('user_id', userData.user_id);
     const { data: s } = await supabaseClient.from('bank').select('balance').eq('user_id', fId).single();
     if (s) await supabaseClient.from('bank').update({ balance: s.balance + amount }).eq('user_id', fId);
     await supabaseClient.from('transfer_requests').update({ status: 'success' }).eq('id', id);
     location.reload();
+}
+
+async function getKzLimit() {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
+    if (data) document.getElementById('kz-slots-display').innerText = data.value;
+}
+
+async function refreshUserData() {
+    if (!userData) return;
+    const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
+    if (data) { userData = data; updateUI(); }
 }
 
 function toggleModal(id, show) { document.getElementById(id)?.classList.toggle('hidden', !show); }
