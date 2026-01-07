@@ -4,18 +4,14 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let userData = null;
 
-// --- 1. ВХІД ---
+// --- ВХІД ---
 async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
 
-    if (!email || !password) return alert("Введіть пошту та пароль");
-
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
-    
     if (authError) return alert("Помилка: " + authError.message);
 
-    // Отримання профілю з таблиці 'bank'
     const { data: profile } = await supabaseClient
         .from('bank')
         .select('*')
@@ -26,163 +22,85 @@ async function signIn() {
         userData = profile;
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
-        
         updateUI();
-        getKzLimit();
-        
-        // Починаємо автооновлення балансу кожні 5 секунд
         setInterval(refreshUserData, 5000);
-    } else {
-        alert("Дані в таблиці 'bank' не знайдено.");
     }
 }
 
-// --- 2. ОНОВЛЕННЯ ДАНИХ ТА ІМЕНІ ---
+// --- ОНОВЛЕННЯ ІНТЕРФЕЙСУ ТА КУРСУ ---
 function updateUI() {
     if (!userData) return;
     
-    // Відображення імені з колонки 'name'
-    const nameElement = document.getElementById('user-name');
-    if (nameElement) {
-        nameElement.innerText = userData.name || "Без імені";
-    }
+    document.getElementById('user-name').innerText = userData.name || "Користувач";
+    document.getElementById('user-balance').innerText = userData.balance;
+    document.getElementById('user-idd').innerText = userData.idd;
 
-    // Відображення балансу
-    const balanceElement = document.getElementById('user-balance');
-    if (balanceElement) {
-        balanceElement.innerText = userData.balance;
-    }
-
-    // Відображення IDD
-    const iddElement = document.getElementById('user-idd');
-    if (iddElement) {
-        iddElement.innerText = userData.idd;
-    }
+    // Розрахунок курсу залежно від VIP-статусу
+    const rate = userData.is_vip_user ? 0.3 : 0.5;
+    const rateElement = document.getElementById('current-rate');
+    if (rateElement) rateElement.innerText = rate;
 }
 
-// Функція для фонового оновлення балансу
-async function refreshUserData() {
-    if (!userData) return;
-    const { data } = await supabaseClient
-        .from('bank')
-        .select('*')
-        .eq('user_id', userData.user_id)
-        .single();
-    if (data) {
-        userData = data;
-        updateUI();
+// --- КУПІВЛЯ ВАЛЮТИ (ЛІСНИЧКІВ) ---
+async function buyCurrency() {
+    const amountToBuy = parseFloat(document.getElementById('exchange-amount').value);
+    if (!amountToBuy || amountToBuy <= 0) return alert("Введіть коректну кількість");
+
+    // Визначаємо ціну за VIP-статусом
+    const rate = userData.is_vip_user ? 0.3 : 0.5;
+    const totalCost = amountToBuy * rate;
+
+    if (userData.balance < totalCost) {
+        return alert(`Недостатньо коштів! Потрібно ${totalCost.toFixed(2)} ₴`);
     }
-}
 
-// --- 3. ОПЛАТА ПОСЛУГ ---
-async function processOrder(name, price) {
-    if (userData.balance < price) return alert("Недостатньо коштів!");
+    const newBalance = userData.balance - totalCost;
 
+    // Оновлюємо баланс в базі
     const { error } = await supabaseClient
         .from('bank')
-        .update({ balance: userData.balance - price })
+        .update({ balance: newBalance })
         .eq('user_id', userData.user_id);
 
     if (!error) {
+        // Записуємо запит на валюту, щоб адмін видав її (або додаємо в іншу таблицю)
         await supabaseClient.from('service_requests').insert([{
             user_id: userData.user_id,
             idd: userData.idd,
-            service: name,
-            price: price
+            service: `💰 Купівля лісничків: ${amountToBuy} шт`,
+            price: totalCost
         }]);
-        
+
+        userData.balance = newBalance;
+        updateUI();
+        alert(`Ви купили ${amountToBuy} лісничків за ${totalCost.toFixed(2)} ₴!`);
+        document.getElementById('exchange-amount').value = '';
+    }
+}
+
+// --- РЕШТА ФУНКЦІЙ (БЕЗ ЗМІН) ---
+async function processOrder(name, price) {
+    if (userData.balance < price) return alert("Недостатньо коштів!");
+    const { error } = await supabaseClient.from('bank').update({ balance: userData.balance - price }).eq('user_id', userData.user_id);
+    if (!error) {
+        await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
         userData.balance -= price;
         updateUI();
         alert(`Прийнято: ${name}`);
     }
 }
 
-// --- 4. ПЕРЕКАЗИ ---
-async function sendTransferRequest() {
-    const toIdd = document.getElementById('target-idd').value;
-    const amount = document.getElementById('transfer-amount').value;
-
-    if (!toIdd || !amount) return alert("Заповніть всі поля");
-
-    const { error } = await supabaseClient.from('transfer_requests').insert([{
-        from_user: userData.user_id,
-        to_idd: parseInt(toIdd),
-        amount: parseFloat(amount),
-        status: 'pending'
-    }]);
-
-    if (!error) {
-        alert("Запит надіслано!");
-        toggleModal('transfer-modal', false);
-    }
+async function refreshUserData() {
+    if (!userData) return;
+    const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
+    if (data) { userData = data; updateUI(); }
 }
 
-async function viewTransferRequests() {
-    const { data } = await supabaseClient
-        .from('transfer_requests')
-        .select('*')
-        .eq('to_idd', userData.idd)
-        .eq('status', 'pending');
+function toggleModal(id, show) { document.getElementById(id)?.classList.toggle('hidden', !show); }
+async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
 
-    const container = document.getElementById('requests-container');
-    container.innerHTML = data?.length ? '' : '<p style="text-align:center">Запитів немає</p>';
-
-    data?.forEach(req => {
-        const div = document.createElement('div');
-        div.className = 'request-item';
-        div.innerHTML = `
-            <p>Сума: <b>${req.amount} ₴</b></p>
-            <button class="service-btn" style="background:#2ecc71; color:#000; padding:10px" onclick="confirmTransfer(${req.id}, ${req.amount}, '${req.from_user}')">OK ✅</button>
-        `;
-        container.appendChild(div);
-    });
-    toggleModal('requests-list-modal', true);
-}
-
-async function confirmTransfer(reqId, amount, fromUserId) {
-    if (userData.balance < amount) return alert("Недостатньо грошей!");
-
-    // Знімаємо у себе
-    const { error: e1 } = await supabaseClient.from('bank').update({ balance: userData.balance - amount }).eq('user_id', userData.user_id);
-    if (e1) return alert("Помилка списання");
-
-    // Додаємо іншому
-    const { data: sender } = await supabaseClient.from('bank').select('balance').eq('user_id', fromUserId).single();
-    if (sender) {
-        await supabaseClient.from('bank').update({ balance: sender.balance + amount }).eq('user_id', fromUserId);
-    }
-
-    // Закриваємо запит
-    await supabaseClient.from('transfer_requests').update({ status: 'success' }).eq('id', reqId);
-    
-    alert("Переказ виконано!");
-    location.reload();
-}
-
-// --- 5. ІНШЕ ---
-async function getKzLimit() {
-    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
-    if (data) {
-        const slots = document.getElementById('kz-slots');
-        if (slots) slots.innerText = data.value;
-    }
-}
-
-function toggleModal(id, show) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden', !show);
-}
-
-async function signOut() {
-    await supabaseClient.auth.signOut();
-    location.reload();
-}
-
-// Прив'язка до HTML
 window.signIn = signIn;
+window.buyCurrency = buyCurrency;
 window.processOrder = processOrder;
-window.sendTransferRequest = sendTransferRequest;
-window.viewTransferRequests = viewTransferRequests;
-window.confirmTransfer = confirmTransfer;
 window.toggleModal = toggleModal;
 window.signOut = signOut;
