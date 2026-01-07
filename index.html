@@ -3,36 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Лісова Пісня - Повний сервіс</title>
+    <title>Лісова Пісня - Повна Система</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #010811; --card: #05111f; --green: #2ecc71; --white: #fff; --blue: #3498db; --purple: #9b59b6; }
+        :root { --bg: #010811; --card: #05111f; --green: #2ecc71; --white: #fff; --blue: #3498db; --purple: #9b59b6; --gold: #f1c40f; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--white); margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; }
         .hidden { display: none !important; }
         
-        /* Стилі для кнопок і карток */
-        .btn { width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--green); color: #000; transition: 0.2s; }
+        .btn { width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--green); color: #000; transition: 0.2s; font-size: 16px; }
+        .btn:active { transform: scale(0.98); }
         .btn-blue { background: var(--blue) !important; color: white !important; }
         .btn-purple { background: var(--purple) !important; color: white !important; }
         .btn-gray { background: #34495e !important; color: white !important; }
         
-        .user-card { background: var(--card); padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #1e2d3d; margin-bottom: 20px; }
-        .balance { font-size: 36px; color: var(--green); font-weight: bold; margin: 10px 0; }
-        .section-header { font-size: 18px; margin: 25px 0 15px; font-weight: bold; border-left: 4px solid var(--green); padding-left: 10px; }
+        .user-card { background: var(--card); padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #1e2d3d; margin-bottom: 20px; }
+        .balance { font-size: 38px; color: var(--green); font-weight: bold; margin: 10px 0; }
+        .vip-badge { color: var(--gold); font-weight: bold; margin-left: 8px; display: none; }
         
-        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0a1625; color: white; box-sizing: border-box; }
+        .section-header { font-size: 18px; margin: 25px 0 15px; font-weight: bold; border-left: 4px solid var(--green); padding-left: 10px; display: flex; align-items: center; gap: 8px; }
+        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0a1625; color: white; box-sizing: border-box; font-size: 16px; }
         
-        /* Модалки */
+        .exchange-box { background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid rgba(46, 204, 113, 0.2); }
+        
         .modal { background: rgba(0,0,0,0.9); position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; }
         .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--green); }
+        .request-item { background: #0d1b2a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #1e2d3d; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="auth-screen">
-        <h2 style="text-align:center">🌲 Лісова Пісня</h2>
+        <h2 style="text-align:center; margin-top: 40px;">🌲 Лісова Пісня</h2>
+        <p style="text-align:center; color: #8899a6;">Увійдіть у свій акаунт</p>
         <input type="email" id="email-input" placeholder="Електронна пошта">
         <input type="password" id="password-input" placeholder="Пароль">
         <button class="btn" onclick="signIn()">УВІЙТИ</button>
@@ -40,9 +44,21 @@
 
     <div id="main-app" class="hidden">
         <div class="user-card">
-            <div id="user-name" style="font-size: 1.2rem;">Завантаження...</div>
+            <div style="font-size: 1.3rem; font-weight: bold; display: flex; justify-content: center; align-items: center;">
+                <span id="user-name">Завантаження...</span>
+                <span id="vip-icon" class="vip-badge">⭐ VIP</span>
+            </div>
             <div class="balance"><span id="user-balance">0</span> ₴</div>
             <div style="color: #8899a6;">IDD: <span id="user-idd">...</span></div>
+        </div>
+
+        <div class="section-header">🪙 Обмін валюти</div>
+        <div class="exchange-box">
+            <p style="margin:0 0 10px 0; font-size: 0.9rem; color: #ccc;">
+                Ваш курс: <b id="current-rate" style="color:var(--green)">0.5</b> ₴ за 1 🌲
+            </p>
+            <input type="number" id="exchange-amount" placeholder="Кількість лісничків">
+            <button class="btn btn-purple" onclick="buyCurrency()">Купити Ліснички</button>
         </div>
 
         <div class="section-header">💳 Фінанси</div>
@@ -67,25 +83,25 @@
         <div class="section-header">🏆 Сервіси</div>
         <button class="btn" onclick="processOrder('💆 Масаж', 150)">💆 Масаж — 150</button>
 
-        <button class="btn btn-gray" style="margin-top: 20px;" onclick="signOut()">ВИЙТИ</button>
+        <button class="btn btn-gray" style="margin-top: 30px;" onclick="signOut()">ВИЙТИ З АКАУНТУ</button>
     </div>
 </div>
 
 <div id="transfer-modal" class="modal hidden">
     <div class="modal-content">
-        <h3>Запит на переказ</h3>
+        <h3 style="margin-top:0">Надіслати запит</h3>
         <input type="number" id="target-idd" placeholder="IDD отримувача">
-        <input type="number" id="transfer-amount" placeholder="Сума">
+        <input type="number" id="transfer-amount" placeholder="Сума ₴">
         <button class="btn" onclick="sendTransferRequest()">Надіслати</button>
-        <button class="btn btn-gray" onclick="toggleModal('transfer-modal', false)">Закрити</button>
+        <button class="btn btn-gray" onclick="toggleModal('transfer-modal', false)">Скасувати</button>
     </div>
 </div>
 
 <div id="requests-list-modal" class="modal hidden">
     <div class="modal-content">
-        <h3>Вхідні запити</h3>
+        <h3 style="margin-top:0">Вхідні запити</h3>
         <div id="requests-container"></div>
-        <button class="btn btn-gray" onclick="toggleModal('requests-list-modal', false)">Закрити</button>
+        <button class="btn btn-gray" style="margin-top:10px" onclick="toggleModal('requests-list-modal', false)">Закрити</button>
     </div>
 </div>
 
