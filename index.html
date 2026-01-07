@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Суп База - Лісова Пісня</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
+    <link rel="stylesheet" href="style.css"> <style>
         :root {
             --bg-color: #010811;
             --card-bg: #05111f;
@@ -59,10 +59,6 @@
 
         <div class="section-header">🔥 Кайф зона (Вільних: <span id="kz-slots">?</span>)</div>
         <button class="service-btn" onclick="processOrder('🪑 1 місце', 60)">🪑 1 місце -60</button>
-        <button class="service-btn" onclick="processOrder('🕶️ Кайф+', 120)">🕶️ Послуга -120</button>
-
-        <div class="section-header">🏆 Сервіси</div>
-        <button class="service-btn" onclick="processOrder('💆 Масаж', 150)">💆 Масаж -150</button>
 
         <button class="service-btn btn-gray" style="margin-top: 20px;" onclick="location.reload()">Вийти</button>
     </div>
@@ -86,81 +82,5 @@
     </div>
 </div>
 
-<script>
-    const SUPABASE_URL = 'https://mefzopeenhfdqfatbjaq.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_LU94dUJoW2jwZJ9WIdfsMw_lEnMQobx';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let userData = null;
-
-    async function login() {
-        const id = document.getElementById('idd-input').value;
-        const { data, error } = await supabaseClient.from('bank').select('*').eq('idd', id).single();
-        if (data) {
-            userData = data;
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            updateUI();
-            getKzLimit();
-        } else { alert("Користувача не знайдено!"); }
-    }
-
-    function updateUI() {
-        document.getElementById('user-name').innerText = userData.name;
-        document.getElementById('user-balance').innerText = userData.balance;
-        document.getElementById('user-idd').innerText = userData.idd;
-    }
-
-    async function getKzLimit() {
-        const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
-        if (data) document.getElementById('kz-slots').innerText = data.value;
-    }
-
-    async function processOrder(name, price) {
-        if (userData.balance < price) return alert("Недостатньо коштів!");
-        
-        const { error } = await supabaseClient.from('bank').update({ balance: userData.balance - price }).eq('idd', userData.idd);
-        
-        if (!error) {
-            await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
-            await supabaseClient.from('transactions').insert([{ user_id: userData.user_id, type: 'minus', info: `Оплата: ${name}`, amount: price }]);
-            
-            userData.balance -= price;
-            updateUI();
-            alert(`Послугу "${name}" успішно сплачено!`);
-        }
-    }
-
-    function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
-
-    async function sendTransferRequest() {
-        const to = document.getElementById('target-idd').value;
-        const am = document.getElementById('transfer-amount').value;
-        await supabaseClient.from('transfer_requests').insert([{ from_user: userData.user_id, to_idd: parseInt(to), amount: parseFloat(am), status: 'pending' }]);
-        alert("Запит надіслано!");
-        toggleModal('transfer-modal', false);
-    }
-
-    async function viewTransferRequests() {
-        const { data } = await supabaseClient.from('transfer_requests').select('*').eq('to_idd', userData.idd).eq('status', 'pending');
-        const cont = document.getElementById('requests-container');
-        cont.innerHTML = data?.length ? '' : 'Немає нових запитів';
-        data?.forEach(req => {
-            const div = document.createElement('div');
-            div.className = 'request-item';
-            div.innerHTML = `Списати: ${req.amount} ₴ <button class="service-btn" onclick="confirmTransfer(${req.id}, ${req.amount})">OK</button>`;
-            cont.appendChild(div);
-        });
-        toggleModal('requests-list-modal', true);
-    }
-
-    async function confirmTransfer(reqId, amount) {
-        if (userData.balance < amount) return alert("Недостатньо грошей!");
-        await supabaseClient.from('bank').update({ balance: userData.balance - amount }).eq('idd', userData.idd);
-        await supabaseClient.from('transfer_requests').update({ status: 'success' }).eq('id', reqId);
-        alert("Гроші переказано!");
-        location.reload();
-    }
-</script>
-</body>
+<script src="script.js"></script> </body>
 </html>
