@@ -5,82 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Суп База - Лісова Пісня</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css"> <style>
+    <style>
         :root {
             --bg-color: #010811;
             --card-bg: #05111f;
             --accent-green: #2ecc71;
             --text-white: #ffffff;
+            --gray-text: #8899a6;
         }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-white); margin: 0; display: flex; justify-content: center; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-white); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+        }
         .container { width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; }
-        .user-card { background: var(--card-bg); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid #1e2d3d; margin-bottom: 20px; }
+        
+        /* Картка користувача */
+        .user-card { 
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            padding: 20px; 
+            text-align: center; 
+            border: 1px solid #1e2d3d; 
+            margin-bottom: 20px; 
+        }
         .balance-big { font-size: 36px; font-weight: bold; color: var(--accent-green); margin: 10px 0; }
-        .service-btn { width: 100%; border: none; padding: 16px; margin-bottom: 12px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; background-color: var(--accent-green); color: #000; transition: 0.2s; }
-        .btn-blue { background-color: #3498db !important; color: white !important; text-decoration: none; }
+        
+        /* Кнопки послуг */
+        .service-btn { 
+            width: 100%; 
+            border: none; 
+            padding: 16px; 
+            margin-bottom: 12px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 16px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+            background-color: var(--accent-green); 
+            color: #000; 
+            transition: 0.2s; 
+        }
+        .service-btn:active { transform: scale(0.98); }
+        
+        .btn-blue { background-color: #3498db !important; color: white !important; }
         .btn-purple { background-color: #9b59b6 !important; color: white !important; }
         .btn-gray { background-color: #34495e !important; color: white !important; }
-        .section-header { font-size: 18px; margin: 25px 0 15px; font-weight: bold; border-left: 4px solid var(--accent-green); padding-left: 10px; }
-        .hidden { display: none; }
-        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #0a1625; color: white; box-sizing: border-box; }
-        .modal { background: rgba(0,0,0,0.9); position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--accent-green); }
-        .request-item { background: #0d1b2a; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e2d3d; }
+        
+        .section-header { 
+            font-size: 18px; 
+            margin: 25px 0 15px; 
+            font-weight: bold; 
+            border-left: 4px solid var(--accent-green); 
+            padding-left: 10px; 
+        }
+
+        /* Поля вводу */
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            margin: 10px 0; 
+            border-radius: 10px; 
+            border: 1px solid #333; 
+            background: #0a1625; 
+            color: white; 
+            box-sizing: border-box; 
+            font-size: 16px;
+        }
+
+        /* Модальні вікна */
+        .modal { 
+            background: rgba(0,0,0,0.85); 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 100; 
+        }
+        .modal-content { 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 20px; 
+            width: 90%; 
+            max-width: 400px; 
+            border: 1px solid var(--accent-green); 
+        }
+
+        .hidden { display: none !important; }
+        
+        .request-item { 
+            background: #0d1b2a; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 10px; 
+            border: 1px solid #1e2d3d; 
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="login-screen">
-        <h2 style="text-align:center">🌲 Лісова Пісня</h2>
-        <input type="number" id="idd-input" placeholder="Введіть ваш IDD">
-        <button class="service-btn" onclick="login()">Увійти</button>
+        <h2 style="text-align:center; margin-top: 50px;">🌲 Лісова Пісня</h2>
+        <p style="text-align:center; color: var(--gray-text);">Введіть ваш персональний IDD для входу</p>
+        <input type="number" id="idd-input" placeholder="Ваш IDD (напр. 532656)">
+        <button class="service-btn" onclick="login()">Увійти в систему</button>
     </div>
 
     <div id="main-app" class="hidden">
         <div class="user-card">
-            <div id="user-name" style="font-size: 1.2rem;">...</div>
+            <div id="user-name" style="font-size: 1.3rem; font-weight: bold;">Завантаження...</div>
             <div class="balance-big"><span id="user-balance">0</span> ₴</div>
-            <div style="color: #8899a6;">IDD: <span id="user-idd">000000</span></div>
+            <div style="color: var(--gray-text);">Ваш IDD: <span id="user-idd">000000</span></div>
         </div>
 
         <div class="section-header">💳 Фінанси</div>
-        <a href="https://next.privat24.ua/send/ijak6" target="_blank" class="service-btn btn-blue">➕ Поповнити баланс</a>
+        <a href="https://next.privat24.ua/send/ijak6" target="_blank" style="text-decoration:none;">
+            <button class="service-btn btn-blue">➕ Поповнити баланс</button>
+        </a>
         <button class="service-btn btn-purple" onclick="toggleModal('transfer-modal', true)">📲 Запит на переказ</button>
         <button class="service-btn btn-gray" onclick="viewTransferRequests()">📩 Переглянути запити</button>
 
         <div class="section-header">🍽️ Послуги</div>
-        <button class="service-btn" onclick="processOrder('🍔 Їжа', 10)">🍔 Їжа -10</button>
-        <button class="service-btn" onclick="processOrder('💧 Вода', 5)">💧 Вода -5</button>
-        <button class="service-btn" onclick="processOrder('🥤 Кола', 12)">🥤 Кола -12</button>
-        <button class="service-btn" onclick="processOrder('🍬 Цукерка', 3)">🍬 Цукерка -3</button>
-        <button class="service-btn" onclick="processOrder('🍌 Банан', 7)">🍌 Банан -7</button>
-        <button class="service-btn" onclick="processOrder('🍊 Мандарини', 8)">🍊 Мандарини -8</button>
+        <button class="service-btn" onclick="processOrder('🍔 Їжа', 10)">🍔 Їжа — 10 ₴</button>
+        <button class="service-btn" onclick="processOrder('💧 Вода', 5)">💧 Вода — 5 ₴</button>
+        <button class="service-btn" onclick="processOrder('🥤 Кола', 12)">🥤 Кола — 12 ₴</button>
+        <button class="service-btn" onclick="processOrder('🍌 Банан', 7)">🍌 Банан — 7 ₴</button>
 
         <div class="section-header">🔥 Кайф зона (Вільних: <span id="kz-slots">?</span>)</div>
-        <button class="service-btn" onclick="processOrder('🪑 1 місце', 60)">🪑 1 місце -60</button>
+        <button class="service-btn" onclick="processOrder('🪑 1 місце', 60)">🪑 1 місце — 60 ₴</button>
 
-        <button class="service-btn btn-gray" style="margin-top: 20px;" onclick="location.reload()">Вийти</button>
+        <button class="service-btn btn-gray" style="margin-top: 30px;" onclick="location.reload()">Вийти з акаунту</button>
     </div>
 </div>
 
 <div id="transfer-modal" class="modal hidden">
     <div class="modal-content">
-        <h3>Запит на переказ</h3>
+        <h3 style="margin-top:0">Новий переказ</h3>
         <input type="number" id="target-idd" placeholder="IDD отримувача">
-        <input type="number" id="transfer-amount" placeholder="Сума">
-        <button class="service-btn" onclick="sendTransferRequest()">Надіслати</button>
-        <button class="service-btn btn-gray" onclick="toggleModal('transfer-modal', false)">Закрити</button>
+        <input type="number" id="transfer-amount" placeholder="Сума переказу">
+        <button class="service-btn" onclick="sendTransferRequest()">Надіслати запит</button>
+        <button class="service-btn btn-gray" onclick="toggleModal('transfer-modal', false)">Скасувати</button>
     </div>
 </div>
 
 <div id="requests-list-modal" class="modal hidden">
     <div class="modal-content">
-        <h3>Вхідні запити</h3>
-        <div id="requests-container"></div>
-        <button class="service-btn btn-gray" onclick="toggleModal('requests-list-modal', false)">Закрити</button>
+        <h3 style="margin-top:0">Вхідні запити</h3>
+        <div id="requests-container">
+            </div>
+        <button class="service-btn btn-gray" style="margin-top:10px" onclick="toggleModal('requests-list-modal', false)">Закрити</button>
     </div>
 </div>
 
-<script src="script.js"></script> </body>
+<script src="script.js"></script>
+
+</body>
 </html>
