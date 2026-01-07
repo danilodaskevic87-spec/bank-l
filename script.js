@@ -4,132 +4,117 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let userData = null;
 
-/**
- * 1. ЛОГІН (Ця функція спрацьовує першою)
- */
-async function login() {
-    const idInput = document.getElementById('idd-input').value;
-    if (!idInput) return alert("Будь ласка, введіть ваш IDD");
+// Аутентифікація користувача
+async function signIn() {
+    const email = document.getElementById('email-input').value;
+    const password = document.getElementById('password-input').value;
 
-    // Перевірка користувача в таблиці bank за полем 'idd'
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    
+    if (error) return alert("Помилка: " + error.message);
+    
+    // Після входу шукаємо баланс користувача по UUID
+    const { data: profile, error: pError } = await supabaseClient
         .from('bank')
         .select('*')
-        .eq('idd', idInput)
+        .eq('user_id', data.user.id)
         .single();
 
-    if (data) {
-        userData = data;
-        
-        // ХОВАЄМО екран логіну, ПОКАЗУЄМО основний додаток
-        document.getElementById('login-screen').classList.add('hidden');
+    if (profile) {
+        userData = profile;
+        document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
-        
         updateUI();
         getKzLimit();
-    } else {
-        alert("IDD не знайдено. Перевірте правильність вводу.");
     }
 }
 
-/**
- * 2. ОНОВЛЕННЯ ІНТЕРФЕЙСУ
- * Відображаємо Name, Balance та IDD з бази
- */
+// Оновлення тексту на екрані
 function updateUI() {
     document.getElementById('user-name').innerText = userData.name;
     document.getElementById('user-balance').innerText = userData.balance;
     document.getElementById('user-idd').innerText = userData.idd;
 }
 
-/**
- * 3. КУПІВЛЯ ПОСЛУГ
- * Списання коштів та запис у лог
- */
+// Оплата послуг
 async function processOrder(name, price) {
-    if (userData.balance < price) return alert("У вас недостатньо коштів на балансі!");
+    if (userData.balance < price) return alert("Недостатньо коштів!");
 
-    const newBalance = userData.balance - price;
-
-    // Оновлюємо баланс у Supabase
-    const { error: updateError } = await supabaseClient
+    const { error } = await supabaseClient
         .from('bank')
-        .update({ balance: newBalance })
-        .eq('idd', userData.idd);
+        .update({ balance: userData.balance - price })
+        .eq('user_id', userData.user_id);
 
-    if (!updateError) {
-        // Додаємо запис у таблицю service_requests
-        await supabaseClient.from('service_requests').insert([{
-            user_id: userData.user_id,
-            idd: userData.idd,
-            service: name,
-            price: price
-        }]);
-
-        // Додаємо запис у транзакції
-        await supabaseClient.from('transactions').insert([{
-            user_id: userData.user_id,
-            type: 'minus',
-            info: `Оплата послуги: ${name}`,
-            amount: price
-        }]);
-
-        userData.balance = newBalance;
+    if (!error) {
+        // Логування в історію
+        await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
+        
+        userData.balance -= price;
         updateUI();
-        alert(`Оплата успішна: ${name}`);
+        alert(`Прийнято: ${name}`);
     }
 }
 
-/**
- * 4. СИСТЕМНІ НАЛАШТУВАННЯ
- * Отримання ліміту місць для "Кайф зони"
- */
-async function getKzLimit() {
-    const { data } = await supabaseClient
-        .from('settings')
-        .select('value')
-        .eq('key', 'kz_limit')
-        .single();
-    if (data) document.getElementById('kz-slots').innerText = data.value;
+// Запит на переказ
+async function sendTransferRequest() {
+    const toIdd = document.getElementById('target-idd').value;
+    const amount = document.getElementById('transfer-amount').value;
+
+    const { error } = await supabaseClient.from('transfer_requests').insert([{
+        from_user: userData.user_id,
+        to_idd: parseInt(toIdd),
+        amount: parseFloat(amount),
+        status: 'pending'
+    }]);
+
+    if (!error) {
+        alert("Запит надіслано!");
+        toggleModal('transfer-modal', false);
+    }
 }
 
-/**
- * 5. ВХІДНІ ЗАПИТИ (Кнопка "📩 Переглянути запити")
- */
+// Перегляд вхідних запитів
 async function viewTransferRequests() {
-    const { data } = await supabaseClient
-        .from('transfer_requests')
-        .select('*')
-        .eq('to_idd', userData.idd)
-        .eq('status', 'pending');
-
+    const { data } = await supabaseClient.from('transfer_requests').select('*').eq('to_idd', userData.idd).eq('status', 'pending');
     const container = document.getElementById('requests-container');
-    
-    // Якщо запитів немає, показуємо текст
-    if (!data || data.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding: 20px;">Нових запитів немає</p>';
-    } else {
-        container.innerHTML = '';
-        data.forEach(req => {
-            const div = document.createElement('div');
-            div.className = 'request-item';
-            div.innerHTML = `
-                <p>Сума: <b>${req.amount} ₴</b></p>
-                <button class="service-btn" onclick="confirmTransfer(${req.id}, ${req.amount})">Підтвердити ✅</button>
-            `;
-            container.appendChild(div);
-        });
-    }
+    container.innerHTML = data?.length ? '' : '<p style="text-align:center">Запитів немає</p>';
+
+    data?.forEach(req => {
+        const div = document.createElement('div');
+        div.className = 'request-item';
+        div.innerHTML = `
+            <p>Сума: ${req.amount} ₴</p>
+            <button class="btn" onclick="confirmTransfer(${req.id}, ${req.amount})">OK</button>
+        `;
+        container.appendChild(div);
+    });
     toggleModal('requests-list-modal', true);
 }
 
-// Допоміжні функції
-function toggleModal(id, show) {
-    document.getElementById(id).classList.toggle('hidden', !show);
+// Підтвердження переказу
+async function confirmTransfer(id, amount) {
+    if (userData.balance < amount) return alert("Не вистачає грошей!");
+    
+    await supabaseClient.from('bank').update({ balance: userData.balance - amount }).eq('user_id', userData.user_id);
+    await supabaseClient.from('transfer_requests').update({ status: 'success' }).eq('id', id);
+    
+    alert("Переказ виконано!");
+    location.reload();
 }
 
-// Прив'язка функцій до глобального об'єкта window для роботи з onclick в HTML
-window.login = login;
+// Ліміти кайф зони
+async function getKzLimit() {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
+    if (data) document.getElementById('kz-slots').innerText = data.value;
+}
+
+function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
+
+window.signIn = signIn;
 window.processOrder = processOrder;
-window.viewTransferRequests = viewTransferRequests;
 window.toggleModal = toggleModal;
+window.sendTransferRequest = sendTransferRequest;
+window.viewTransferRequests = viewTransferRequests;
+window.confirmTransfer = confirmTransfer;
+window.signOut = signOut;
