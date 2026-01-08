@@ -19,6 +19,42 @@ const kzServices = [
     { n: '🕶️ Принести з кухні', p: 120 }
 ];
 
+async function activatePromo() {
+    // Викликає вікно поверх сайту. Дизайн HTML не міняється!
+    const userCode = prompt("Введіть секретний промокод:");
+    
+    if (!userCode) return; // Якщо натиснули "Скасувати"
+
+    // Шукаємо код у базі
+    const { data, error } = await supabaseClient
+        .from('promo_codes')
+        .select('*')
+        .eq('code', userCode)
+        .eq('is_active', true)
+        .single();
+
+    if (error || !data) {
+        return alert("❌ Код недійсний або вже використаний!");
+    }
+
+    // Додаємо гроші до балансу
+    const { error: updateError } = await supabaseClient
+        .from('bank')
+        .update({ balance: userData.balance + data.reward })
+        .eq('user_id', userData.user_id);
+
+    if (!updateError) {
+        // Позначаємо код як використаний
+        await supabaseClient.from('promo_codes').update({ is_active: false }).eq('id', data.id);
+        
+        alert(`✅ Успішно! Нараховано ${data.reward} 🌲`);
+        refreshUserData(); // Оновлюємо баланс на екрані
+    }
+}
+
+// Реєструємо функцію
+window.activatePromo = activatePromo;
+
 async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
