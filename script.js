@@ -2,23 +2,41 @@ const SUPABASE_URL = 'https://mefzopeenhfdqfatbjaq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LU94dUJoW2jwZJ9WIdfsMw_lEnMQobx';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const PRIVAT_LINK = "https://next.privat24.ua/send/ijak6";
+const MONO_JAR = "https://send.monobank.ua/jar/93dZgGk4oC";
 let userData = null;
+let cart = [];
+let selectedRating = 5;
+let kzLimit = 0;
+
+const services = [
+    { n: '🍔 Їжа', p: 10 }, { n: '💧 Вода', p: 5 }, { n: '🥤 Кола', p: 12 },
+    { n: '🍬 Цукерка', p: 3 }, { n: '🍌 Банан', p: 7 }, { n: '🍊 Мандарини', p: 8 },
+    { n: '💆 Масаж', p: 150 }, { n: 'Номер', p: 300 }, { n: 'Тренажер', p: 250 }
+];
+
+const kzServices = [
+    { n: '🪑 1 місце', p: 60 },
+    { n: '🕶️ Принести з кухні', p: 120 }
+];
 
 async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
     const { data: authData, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) return alert("Помилка входу!");
+    if (error) return alert("Помилка входу");
 
     const { data: profile } = await supabaseClient.from('bank').select('*').eq('user_id', authData.user.id).single();
     if (profile) {
         userData = profile;
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('cart-btn').classList.remove('hidden');
+        renderServices();
         updateUI();
-        getKzLimit();
+        loadNews();
+        refreshKzLimit();
         setInterval(refreshUserData, 5000);
+        setInterval(refreshKzLimit, 10000);
     }
 }
 
@@ -27,62 +45,164 @@ function updateUI() {
     document.getElementById('user-name').innerText = userData.name;
     document.getElementById('user-balance').innerText = userData.balance;
     document.getElementById('user-idd').innerText = userData.idd;
+    document.getElementById('user-spent').innerText = userData.total_spent || 0;
+    
+    let rank = "НОВАЧОК";
+    const spent = userData.total_spent || 0;
+    if (spent > 500) rank = "ПОСТІЙНИЙ ГІСТЬ";
+    if (spent > 2000) rank = "ЛЕГЕНДА ЛІСУ";
+    document.getElementById('user-rank').innerText = rank;
+
     document.getElementById('vip-icon').style.display = userData.is_vip_user ? 'inline' : 'none';
     document.getElementById('current-rate').innerText = userData.is_vip_user ? '0.3' : '0.5';
 }
 
-// ОБМІН (Калькулятор + Приват)
-function buyCurrency() {
-    const amount = parseFloat(document.getElementById('exchange-amount').value);
-    if (!amount || amount <= 0) return alert("Введіть кількість!");
-    const rate = userData.is_vip_user ? 0.3 : 0.5;
-    alert(`Сума до оплати: ${ (amount * rate).toFixed(2) } ₴. Переходимо в Приват24.`);
-    window.open(PRIVAT_LINK, "_blank");
+function renderServices() {
+    document.getElementById('services-list').innerHTML = services.map(s => `
+        <div class="service-row">
+            <span>${s.n} — ${s.p} ₴</span>
+            <div style="display:flex; gap:5px;">
+                <button class="btn btn-small" onclick="processOrder('${s.n}', ${s.p}, false)">КУПИТИ</button>
+                <button class="btn btn-small btn-blue" onclick="addToCart('${s.n}', ${s.p})">🛒</button>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('kz-list').innerHTML = kzServices.map(s => `
+        <div class="service-row">
+            <span>${s.n} — ${s.p} ₴</span>
+            <button class="btn btn-small btn-purple kz-btn" onclick="processOrder('${s.n}', ${s.p}, true)">ЗАБРОНЮВАТИ</button>
+        </div>
+    `).join('');
 }
 
-// ПОСЛУГИ (Просте списання)
-async function processOrder(name, price) {
-    if (userData.balance < price) return alert("Мало грошей на балансі!");
-    const { error } = await supabaseClient.from('bank').update({ balance: userData.balance - price }).eq('user_id', userData.user_id);
-    if (!error) {
-        await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
-        userData.balance -= price;
-        updateUI();
-        alert(`Сплачено: ${name}`);
+async function refreshKzLimit() {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
+    if (data) {
+        kzLimit = parseInt(data.value);
+        document.getElementById('kz-status').innerText = `Вільних: ${kzLimit}`;
+        const btns = document.querySelectorAll('.kz-btn');
+        btns.forEach(b => b.disabled = kzLimit <= 0);
     }
 }
 
-// ВІДГУКИ
+// КУПІВЛЯ (З ПЕРЕВІРКОЮ ЛІМІТУ)
+async function processOrder(name, price, isKz) {
+    if (userData.balance < price) return alert("Недостатньо лісничків!");
+    
+    if (isKz) {
+        await refreshKzLimit();
+        if (kzLimit <= 0) return alert("Немає вільних місць у Кайф-зоні!");
+    }
+
+    const { error } = await supabaseClient.from('bank').update({ 
+        balance: userData.balance - price,
+        total_spent: (userData.total_spent || 0) + price
+    }).eq('user_id', userData.user_id);
+
+    if (!error) {
+        if (isKz) {
+            await supabaseClient.from('settings').update({ value: (kzLimit - 1).toString() }).eq('key', 'kz_limit');
+            refreshKzLimit();
+        }
+        await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
+        alert(`Оплачено: ${name}`);
+        refreshUserData();
+    }
+}
+
+// ОБМІН ЧЕРЕЗ МОНОБАНК
+function buyCurrency() {
+    const amount = document.getElementById('exchange-amount').value;
+    if (!amount || amount <= 0) return alert("Введіть кількість лісничків");
+    const rate = userData.is_vip_user ? 0.3 : 0.5;
+    const finalPrice = (amount * rate).toFixed(2);
+    alert(`Сума до оплати: ${finalPrice} ₴. Відкриваємо банку Monobank.`);
+    window.open(MONO_JAR, "_blank");
+}
+
+// КОШИК
+function addToCart(name, price) {
+    cart.push({ name, price });
+    document.getElementById('cart-count').innerText = cart.length;
+}
+
+async function checkoutCart() {
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    if (userData.balance < total) return alert("Мало коштів!");
+    
+    const { error } = await supabaseClient.from('bank').update({ 
+        balance: userData.balance - total,
+        total_spent: (userData.total_spent || 0) + total 
+    }).eq('user_id', userData.user_id);
+
+    if (!error) {
+        for (let item of cart) {
+            await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: item.name, price: item.price }]);
+        }
+        alert("Кошик оплачено!");
+        cart = []; document.getElementById('cart-count').innerText = 0;
+        toggleModal('cart-modal', false);
+        refreshUserData();
+    }
+}
+
+// КОЛЕСО
+async function spinWheel() {
+    const btn = document.getElementById('spin-btn');
+    btn.disabled = true;
+    const prizes = [0, 5, 2, 10, 0, 50, 0, 1];
+    const win = prizes[Math.floor(Math.random() * prizes.length)];
+    document.getElementById('wheel-result').innerText = "Крутимо...";
+    setTimeout(async () => {
+        document.getElementById('wheel-result').innerText = win > 0 ? `Виграш: ${win} 🌲!` : "Спробуй ще!";
+        if (win > 0) {
+            await supabaseClient.from('bank').update({ balance: userData.balance + win }).eq('user_id', userData.user_id);
+            refreshUserData();
+        }
+        btn.disabled = false;
+    }, 2000);
+}
+
+// ІНШЕ
+async function refreshUserData() {
+    if (!userData) return;
+    const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
+    if (data) { userData = data; updateUI(); }
+}
+
+async function loadNews() {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'news').single();
+    if (data) document.getElementById('news-text').innerText = data.value;
+}
+
+function setRating(n) {
+    selectedRating = n;
+    const stars = document.getElementById('star-input').children;
+    for (let i = 0; i < 5; i++) stars[i].className = i < n ? "active" : "";
+}
+
 async function sendReview() {
     const text = document.getElementById('review-text').value;
-    if (!text) return alert("Напишіть текст!");
-    const { error } = await supabaseClient.from('reviews').insert([{ user_name: userData.name, user_idd: userData.idd, text: text }]);
-    if (!error) {
-        alert("Відгук надіслано!");
-        document.getElementById('review-text').value = '';
-        toggleModal('review-modal', false);
-    }
+    if (!text) return alert("Напишіть текст");
+    await supabaseClient.from('reviews').insert([{ user_name: userData.name, user_idd: userData.idd, text: `[${selectedRating}⭐] ${text}` }]);
+    alert("Відгук надіслано");
+    toggleModal('review-modal', false);
 }
 
 async function loadReviews() {
     const { data } = await supabaseClient.from('reviews').select('*').order('created_at', { ascending: false });
     const cont = document.getElementById('reviews-container');
-    cont.innerHTML = data && data.length ? '' : 'Відгуків немає';
-    data?.forEach(rev => {
-        const div = document.createElement('div');
-        div.className = 'request-item';
-        div.innerHTML = `<b>${rev.user_name} (ID:${rev.user_idd})</b><br>${rev.text}`;
-        cont.appendChild(div);
-    });
+    cont.innerHTML = data?.map(r => `<div style="background:#0d1b2a; padding:10px; margin-bottom:5px; border-radius:10px;"><b>${r.user_name}</b>: ${r.text}</div>`).join('') || 'Порожньо';
     toggleModal('reviews-list-modal', true);
 }
 
-// ПЕРЕКАЗИ
 async function sendTransferRequest() {
     const to = document.getElementById('target-idd').value;
     const am = document.getElementById('transfer-amount').value;
+    if(!to || !am) return alert("Заповніть поля");
     await supabaseClient.from('transfer_requests').insert([{ from_user: userData.user_id, to_idd: parseInt(to), amount: parseFloat(am), status: 'pending' }]);
-    alert("Запит надіслано!");
+    alert("Запит надіслано");
     toggleModal('transfer-modal', false);
 }
 
@@ -92,38 +212,41 @@ async function viewTransferRequests() {
     cont.innerHTML = data?.length ? '' : 'Запитів немає';
     data?.forEach(req => {
         const div = document.createElement('div');
-        div.className = 'request-item';
-        div.innerHTML = `<p>Сума: ${req.amount} ₴</p><button class="btn" onclick="confirmTransfer(${req.id}, ${req.amount}, '${req.from_user}')">OK</button>`;
+        div.style.background = '#0d1b2a'; div.style.padding = '10px'; div.style.marginBottom = '5px'; div.style.borderRadius = '10px';
+        div.innerHTML = `Сума: ${req.amount} ₴ <button class="btn btn-small" onclick="confirmTransfer(${req.id}, ${req.amount}, '${req.from_user}')">OK</button>`;
         cont.appendChild(div);
     });
     toggleModal('requests-list-modal', true);
 }
 
 async function confirmTransfer(id, amount, fId) {
-    if (userData.balance < amount) return alert("Мало грошей!");
+    if (userData.balance < amount) return alert("Мало грн");
     await supabaseClient.from('bank').update({ balance: userData.balance - amount }).eq('user_id', userData.user_id);
     const { data: s } = await supabaseClient.from('bank').select('balance').eq('user_id', fId).single();
     if (s) await supabaseClient.from('bank').update({ balance: s.balance + amount }).eq('user_id', fId);
     await supabaseClient.from('transfer_requests').update({ status: 'success' }).eq('id', id);
+    alert("Переказ виконано");
     location.reload();
 }
 
-// СЛУЖБОВІ
-async function getKzLimit() {
-    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
-    if (data) document.getElementById('kz-slots-display').innerText = data.value;
+function toggleModal(id, show) { 
+    if (id === 'cart-modal' && show) renderCart();
+    document.getElementById(id).classList.toggle('hidden', !show); 
 }
 
-async function refreshUserData() {
-    if (!userData) return;
-    const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
-    if (data) { userData = data; updateUI(); }
+function renderCart() {
+    const cont = document.getElementById('cart-items-list');
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    cont.innerHTML = cart.length ? cart.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.name}</span><span style="color:var(--red);" onclick="removeFromCart(${i})">❌ ${item.price}₴</span></div>`).join('') : 'Кошик порожній';
+    document.getElementById('cart-total').innerText = total;
 }
 
-function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+function removeFromCart(i) { cart.splice(i, 1); document.getElementById('cart-count').innerText = cart.length; renderCart(); }
 async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
 
 window.signIn = signIn; window.buyCurrency = buyCurrency; window.processOrder = processOrder;
 window.sendReview = sendReview; window.loadReviews = loadReviews; window.toggleModal = toggleModal;
+window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeFromCart = removeFromCart;
+window.spinWheel = spinWheel; window.setRating = setRating; window.signOut = signOut;
 window.sendTransferRequest = sendTransferRequest; window.viewTransferRequests = viewTransferRequests;
-window.confirmTransfer = confirmTransfer; window.signOut = signOut;
+window.confirmTransfer = confirmTransfer;
