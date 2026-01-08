@@ -58,7 +58,8 @@
         </div>
 
         <button class="btn btn-blue" onclick="toggleModal('wheel-modal', true)">🎡 Колесо Фортуни</button>
-
+        <button class="btn" style="background: var(--gold); color: black;" onclick="usePromo()">🎁 АКТИВУВАТИ ПРОМОКОД</button>
+        
         <div class="section-header">🪙 Купити Ліснички</div>
         <div style="background: rgba(255, 76, 76, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--mono);">
             <p style="margin:0 0 10px; font-size: 0.9rem;">Курс: <b id="current-rate">0.5</b> ₴ за 1 🌲</p>
@@ -104,8 +105,6 @@
         <button id="spin-btn" class="btn btn-purple" onclick="spinWheel()">КРУТИТИ</button>
         <button class="btn btn-gray" onclick="toggleModal('wheel-modal', false)">ЗАКРИТИ</button>
     </div>
-</div>
-    <button class="btn" style="background: var(--gold); color: black;" onclick="usePromo()">🎁 АКТИВУВАТИ ПРОМОКОД</button>
 </div>
 <div id="review-modal" class="modal hidden">
     <div class="modal-content">
