@@ -259,3 +259,4 @@ window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeF
 window.spinWheel = spinWheel; window.setRating = setRating; window.signOut = signOut;
 window.sendTransferRequest = sendTransferRequest; window.viewTransferRequests = viewTransferRequests;
 window.confirmTransfer = confirmTransfer;
+window.activatePromo = activatePromo;
