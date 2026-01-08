@@ -96,7 +96,62 @@ async function refreshUserData() {
     if (!userData) return;
     const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
     if (data) { userData = data; updateUI(); }
+}// Надсилання відгуку
+async function sendReview() {
+    const text = document.getElementById('review-text').value;
+    if (!text) return alert("Напишіть текст відгуку!");
+
+    const { error } = await supabaseClient.from('reviews').insert([{
+        user_name: userData.name,
+        user_idd: userData.idd,
+        text: text
+    }]);
+
+    if (!error) {
+        alert("Дякуємо за відгук! ❤️");
+        document.getElementById('review-text').value = '';
+        toggleModal('review-modal', false);
+    } else {
+        alert("Помилка при надсиланні");
+    }
 }
+
+// Завантаження відгуків
+async function loadReviews() {
+    const { data, error } = await supabaseClient
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    const cont = document.getElementById('reviews-container');
+    cont.innerHTML = '';
+
+    if (data && data.length > 0) {
+        data.forEach(rev => {
+            const div = document.createElement('div');
+            div.style.background = '#0d1b2a';
+            div.style.padding = '15px';
+            div.style.borderRadius = '12px';
+            div.style.marginBottom = '10px';
+            div.style.border = '1px solid #1e2d3d';
+            div.innerHTML = `
+                <div style="color:var(--green); font-weight:bold;">${rev.user_name} (ID: ${rev.user_idd})</div>
+                <div style="margin-top:5px; font-size:0.95rem;">${rev.text}</div>
+                <div style="color:#556677; font-size:0.7rem; margin-top:8px;">${new Date(rev.created_at).toLocaleString()}</div>
+            `;
+            cont.appendChild(div);
+        });
+    } else {
+        cont.innerHTML = '<p style="text-align:center">Відгуків поки немає...</p>';
+    }
+    toggleModal('reviews-list-modal', true);
+}
+
+// Не забудь додати ці функції до window, щоб кнопки їх бачили
+window.sendReview = sendReview;
+window.loadReviews = loadReviews;
+
+
 
 function toggleModal(id, show) { document.getElementById(id)?.classList.toggle('hidden', !show); }
 async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
