@@ -78,6 +78,26 @@
         <button class="btn" onclick="processOrder('💆 Масаж', 150)">💆 Масаж — 150 ₴</button>
         <button class="btn" onclick="processOrder('номер', 300)">номер — 300 ₴</button>
          <button class="btn" onclick="processOrder('тренажер', 250)">тренажер — 250 ₴</button>
+        <div class="section-header">💬 Відгуки</div>
+<button class="btn btn-blue" onclick="toggleModal('review-modal', true)">✍️ Залишити відгук</button>
+<button class="btn btn-gray" onclick="loadReviews()">📖 Читати відгуки</button>
+
+<div id="review-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Ваш відгук</h3>
+        <textarea id="review-text" style="width:100%; height:100px; border-radius:10px; padding:10px; background:#0a1625; color:white; border:1px solid #333;" placeholder="Напишіть щось приємне..."></textarea>
+        <button class="btn" style="margin-top:10px;" onclick="sendReview()">Надіслати</button>
+        <button class="btn btn-gray" onclick="toggleModal('review-modal', false)">Закрити</button>
+    </div>
+</div>
+
+<div id="reviews-list-modal" class="modal hidden">
+    <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <h3>Відгуки гостей</h3>
+        <div id="reviews-container"></div>
+        <button class="btn btn-gray" onclick="toggleModal('reviews-list-modal', false)">Закрити</button>
+    </div>
+</div>
     
         <button class="btn btn-gray" style="margin-top: 30px;" onclick="signOut()">ВИЙТИ</button>
     </div>
