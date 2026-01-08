@@ -43,7 +43,7 @@ function buyCurrency() {
     const rate = userData.is_vip_user ? 0.3 : 0.5;
     const totalCost = (amount * rate).toFixed(2);
     alert(`До сплати за ${amount}🌲: ${totalCost} ₴. Перенаправляю на Приват24...`);
-    window.open("https://next.privat24.ua/send/ijak6", "_blank");
+    window.open("https://send.monobank.ua/jar/93dZgGk4oC", "_blank");
 }
 
 async function processOrder(name, price) {
