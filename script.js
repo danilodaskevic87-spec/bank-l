@@ -36,12 +36,14 @@ async function signIn() {
         updateUI();
         loadNews();
         refreshKzLimit();
+        // Автоматичне оновлення даних
         setInterval(refreshUserData, 5000);
         setInterval(refreshKzLimit, 10000);
+        setInterval(loadNews, 30000);
     }
 }
 
-// --- ГРА ЛІС ---
+// --- ВІЗУАЛЬНА ГРА "ЛІС" ---
 async function startForestGame() {
     if (userData.balance < 23) return alert("Недостатньо 🌲 (треба 23)");
     const modalBody = document.querySelector('#wheel-modal .modal-content');
@@ -79,14 +81,13 @@ async function clickForest(el) {
     setTimeout(() => toggleModal('wheel-modal', false), 1200);
 }
 
-// --- ІНТЕРФЕЙС ---
+// --- ОНОВЛЕННЯ ІНТЕРФЕЙСУ ---
 function updateUI() {
     if (!userData) return;
     document.getElementById('user-name').innerText = userData.name;
     document.getElementById('user-balance').innerText = userData.balance;
     document.getElementById('user-idd').innerText = userData.idd;
     document.getElementById('user-spent').innerText = userData.total_spent || 0;
-    
     let rank = "НОВАЧОК";
     const spent = userData.total_spent || 0;
     if (spent > 500) rank = "ПОСТІЙНИЙ ГІСТЬ";
@@ -106,7 +107,6 @@ function renderServices() {
             </div>
         </div>
     `).join('');
-
     document.getElementById('kz-list').innerHTML = kzServices.map(s => `
         <div class="service-row">
             <span>${s.n} — ${s.p} ₴</span>
@@ -115,7 +115,7 @@ function renderServices() {
     `).join('');
 }
 
-// --- ЗАМОВЛЕННЯ ТА ЛІМІТИ ---
+// --- ЛІМІТИ ТА НОВИНИ ---
 async function refreshKzLimit() {
     const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
     if (data) {
@@ -125,6 +125,12 @@ async function refreshKzLimit() {
     }
 }
 
+async function loadNews() {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'news').single();
+    if (data) document.getElementById('news-text').innerText = data.value;
+}
+
+// --- ЗАМОВЛЕННЯ ---
 async function processOrder(name, price, isKz) {
     if (userData.balance < price) return alert("Мало коштів!");
     if (isKz) {
@@ -135,7 +141,6 @@ async function processOrder(name, price, isKz) {
         balance: userData.balance - price,
         total_spent: (userData.total_spent || 0) + price
     }).eq('user_id', userData.user_id);
-
     if (!error) {
         if (isKz) await supabaseClient.from('settings').update({ value: (kzLimit - 1).toString() }).eq('key', 'kz_limit');
         await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
@@ -229,7 +234,7 @@ function removeFromCart(i) { cart.splice(i, 1); document.getElementById('cart-co
 function renderCart() {
     const cont = document.getElementById('cart-items-list');
     const total = cart.reduce((sum, item) => sum + item.price, 0);
-    cont.innerHTML = cart.length ? cart.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.name}</span><span style="color:var(--red);" onclick="removeFromCart(${i})">❌ ${item.price}₴</span></div>`).join('') : 'Кошик порожній';
+    cont.innerHTML = cart.length ? cart.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.name}</span><span style="color:var(--red); cursor:pointer;" onclick="removeFromCart(${i})">❌ ${item.price}₴</span></div>`).join('') : 'Кошик порожній';
     document.getElementById('cart-total').innerText = total;
 }
 
@@ -248,16 +253,18 @@ async function refreshUserData() {
     if (data) { userData = data; updateUI(); }
 }
 
-async function loadNews() {
-    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'news').single();
-    if (data) document.getElementById('news-text').innerText = data.value;
+function buyCurrency() {
+    const amount = document.getElementById('exchange-amount').value;
+    if (!amount || amount <= 0) return alert("Введіть кількість");
+    const rate = userData.is_vip_user ? 0.3 : 0.5;
+    alert(`До оплати: ${(amount * rate).toFixed(2)} ₴. Відкриваємо Monobank.`);
+    window.open(MONO_JAR, "_blank");
 }
 
-function buyCurrency() { window.open(MONO_JAR, "_blank"); }
 function toggleModal(id, show) { if (id === 'cart-modal' && show) renderCart(); document.getElementById(id).classList.toggle('hidden', !show); }
 async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
 
-// --- ГЛОБАЛЬНА РЕЄСТРАЦІЯ (ЩОБ HTML БАЧИВ ФУНКЦІЇ) ---
+// --- ПРИВ'ЯЗКА ФУНКЦІЙ ДО WINDOW ---
 window.signIn = signIn; window.buyCurrency = buyCurrency; window.processOrder = processOrder;
 window.sendReview = sendReview; window.loadReviews = loadReviews; window.toggleModal = toggleModal;
 window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeFromCart = removeFromCart;
