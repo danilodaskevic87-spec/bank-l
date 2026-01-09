@@ -7,6 +7,7 @@ let userData = null;
 let cart = [];
 let selectedRating = 5;
 let kzLimit = 0;
+let forestWinSession = 0;
 
 const services = [
     { n: '🍔 Їжа', p: 10 }, { n: '💧 Вода', p: 5 }, { n: '🥤 Кола', p: 12 },
@@ -24,7 +25,8 @@ async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
     const { data: authData, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) return alert("Помилка входу");
+    
+    if (error) return alert("Помилка входу: перевірте дані");
 
     const { data: profile } = await supabaseClient.from('bank').select('*').eq('user_id', authData.user.id).single();
     if (profile) {
@@ -36,63 +38,100 @@ async function signIn() {
         updateUI();
         loadNews();
         refreshKzLimit();
-        // Автоматичне оновлення даних
+        // Автоматичне оновлення
         setInterval(refreshUserData, 5000);
         setInterval(refreshKzLimit, 10000);
         setInterval(loadNews, 30000);
     }
 }
 
-// --- ВІЗУАЛЬНА ГРА "ЛІС" ---
+// --- НОВА ВІЗУАЛЬНА ГРА "ЛІС" (ГРАТИ ДО ПРОГРАШУ) ---
 async function startForestGame() {
     if (userData.balance < 23) return alert("Недостатньо 🌲 (треба 23)");
+    
+    // Списання за вхід
+    const { error } = await supabaseClient.from('bank')
+        .update({ balance: userData.balance - 23 })
+        .eq('user_id', userData.user_id);
+    
+    if (error) return alert("Помилка транзакції");
+    
+    forestWinSession = 0;
+    await refreshUserData();
+
     const modalBody = document.querySelector('#wheel-modal .modal-content');
-    modalBody.innerHTML = '<h2 style="color:white; text-shadow: 2px 2px 4px #000;">Знайди скарб у лісі!</h2>';
-    const playground = document.createElement('div');
-    playground.id = 'forest-playground';
+    modalBody.innerHTML = `
+        <h2 style="color:white; text-shadow: 2px 2px 4px #000; text-align:center;">🌲 Магічний Ліс 🌲</h2>
+        <p id="forest-status" style="color:#22c55e; text-align:center; font-size:20px; font-weight:bold; background:rgba(0,0,0,0.6); border-radius:10px; padding:5px;">Зібрано: 0 🌲</p>
+        <div id="forest-playground"></div>
+    `;
+    
+    const playground = document.getElementById('forest-playground');
+    // Стилі для сітки гри
+    playground.style.display = 'grid';
+    playground.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    playground.style.gap = '10px';
+    playground.style.padding = '15px';
+    playground.style.background = "url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=500') center/cover";
+    playground.style.borderRadius = '15px';
+
     const items = [...Array(10).fill('🌿'), ...Array(5).fill('🌳'), ...Array(5).fill('☁️')];
     items.sort(() => Math.random() - 0.5);
+
     items.forEach(emoji => {
         const div = document.createElement('div');
-        div.className = 'forest-obj';
+        div.style.fontSize = '35px';
+        div.style.cursor = 'pointer';
+        div.style.textAlign = 'center';
+        div.style.transition = '0.2s';
         div.innerText = emoji;
+        div.className = 'forest-item';
         div.onclick = () => clickForest(div);
         playground.appendChild(div);
     });
-    modalBody.appendChild(playground);
+
     toggleModal('wheel-modal', true);
 }
 
 async function clickForest(el) {
     if (el.classList.contains('found')) return;
-    let balance = userData.balance - 23;
-    await supabaseClient.from('bank').update({ balance: balance }).eq('user_id', userData.user_id);
-    if (Math.random() > 0.5) {
-        const win = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
-        await supabaseClient.from('bank').update({ balance: balance + win }).eq('user_id', userData.user_id);
+    el.classList.add('found');
+    el.style.pointerEvents = 'none';
+
+    if (Math.random() > 0.4) { // 60% шанс на виграш
+        const win = Math.floor(Math.random() * 12) + 3; // 3-15 🌲
+        forestWinSession += win;
+        
+        await supabaseClient.from('bank').update({ balance: userData.balance + win }).eq('user_id', userData.user_id);
+        
         el.innerText = '💰';
-        alert(`🎉 Ти знайшов ${win} 🌲!`);
+        el.style.transform = 'scale(1.2)';
+        document.getElementById('forest-status').innerText = `Зібрано: ${forestWinSession} 🌲`;
+        refreshUserData();
     } else {
         el.innerText = '❌';
-        alert("Тут порожньо...");
+        el.style.opacity = '0.5';
+        alert(`Порожньо! Ви натрапили на пастку. Гру закінчено.\nВаш виграш: ${forestWinSession} 🌲`);
+        // Блокуємо решту
+        document.querySelectorAll('.forest-item').forEach(item => item.classList.add('found'));
+        setTimeout(() => toggleModal('wheel-modal', false), 1500);
     }
-    el.classList.add('found');
-    refreshUserData();
-    setTimeout(() => toggleModal('wheel-modal', false), 1200);
 }
 
-// --- ОНОВЛЕННЯ ІНТЕРФЕЙСУ ---
+// --- ОНОВЛЕННЯ UI ---
 function updateUI() {
     if (!userData) return;
     document.getElementById('user-name').innerText = userData.name;
     document.getElementById('user-balance').innerText = userData.balance;
     document.getElementById('user-idd').innerText = userData.idd;
     document.getElementById('user-spent').innerText = userData.total_spent || 0;
+    
     let rank = "НОВАЧОК";
     const spent = userData.total_spent || 0;
     if (spent > 500) rank = "ПОСТІЙНИЙ ГІСТЬ";
     if (spent > 2000) rank = "ЛЕГЕНДА ЛІСУ";
     document.getElementById('user-rank').innerText = rank;
+
     document.getElementById('vip-icon').style.display = userData.is_vip_user ? 'inline' : 'none';
     document.getElementById('current-rate').innerText = userData.is_vip_user ? '0.3' : '0.5';
 }
@@ -107,6 +146,7 @@ function renderServices() {
             </div>
         </div>
     `).join('');
+
     document.getElementById('kz-list').innerHTML = kzServices.map(s => `
         <div class="service-row">
             <span>${s.n} — ${s.p} ₴</span>
@@ -115,7 +155,7 @@ function renderServices() {
     `).join('');
 }
 
-// --- ЛІМІТИ ТА НОВИНИ ---
+// --- СЕРВІСНІ ФУНКЦІЇ (ЛІМІТИ ТА НОВИНИ) ---
 async function refreshKzLimit() {
     const { data } = await supabaseClient.from('settings').select('value').eq('key', 'kz_limit').single();
     if (data) {
@@ -130,7 +170,6 @@ async function loadNews() {
     if (data) document.getElementById('news-text').innerText = data.value;
 }
 
-// --- ЗАМОВЛЕННЯ ---
 async function processOrder(name, price, isKz) {
     if (userData.balance < price) return alert("Мало коштів!");
     if (isKz) {
@@ -141,6 +180,7 @@ async function processOrder(name, price, isKz) {
         balance: userData.balance - price,
         total_spent: (userData.total_spent || 0) + price
     }).eq('user_id', userData.user_id);
+
     if (!error) {
         if (isKz) await supabaseClient.from('settings').update({ value: (kzLimit - 1).toString() }).eq('key', 'kz_limit');
         await supabaseClient.from('service_requests').insert([{ user_id: userData.user_id, idd: userData.idd, service: name, price: price }]);
@@ -179,28 +219,7 @@ async function usePromo() {
     }
 }
 
-// --- ВІДГУКИ ---
-function setRating(n) {
-    selectedRating = n;
-    const stars = document.getElementById('star-input').children;
-    for (let i = 0; i < 5; i++) stars[i].className = i < n ? "active" : "";
-}
-
-async function sendReview() {
-    const text = document.getElementById('review-text').value;
-    if (!text) return alert("Напишіть текст!");
-    await supabaseClient.from('reviews').insert([{ user_name: userData.name, user_idd: userData.idd, text: `[${selectedRating}⭐] ${text}` }]);
-    alert("Відгук надіслано!"); toggleModal('review-modal', false);
-}
-
-async function loadReviews() {
-    const { data } = await supabaseClient.from('reviews').select('*').order('created_at', { ascending: false });
-    const cont = document.getElementById('reviews-container');
-    cont.innerHTML = data?.map(r => `<div style="background:#0d1b2a; padding:10px; margin-bottom:5px; border-radius:10px;"><b>${r.user_name}</b>: ${r.text}</div>`).join('') || 'Порожньо';
-    toggleModal('reviews-list-modal', true);
-}
-
-// --- ПЕРЕКАЗИ ---
+// --- ПЕРЕКАЗИ ТА ВІДГУКИ ---
 async function sendTransferRequest() {
     const to = document.getElementById('target-idd').value;
     const am = document.getElementById('transfer-amount').value;
@@ -227,6 +246,26 @@ async function confirmTransfer(id, amount, fId) {
     alert("Переказ виконано!"); toggleModal('requests-list-modal', false); refreshUserData();
 }
 
+function setRating(n) {
+    selectedRating = n;
+    const stars = document.getElementById('star-input').children;
+    for (let i = 0; i < 5; i++) stars[i].className = i < n ? "active" : "";
+}
+
+async function sendReview() {
+    const text = document.getElementById('review-text').value;
+    if (!text) return alert("Напишіть текст!");
+    await supabaseClient.from('reviews').insert([{ user_name: userData.name, user_idd: userData.idd, text: `[${selectedRating}⭐] ${text}` }]);
+    alert("Відгук надіслано!"); toggleModal('review-modal', false);
+}
+
+async function loadReviews() {
+    const { data } = await supabaseClient.from('reviews').select('*').order('created_at', { ascending: false });
+    const cont = document.getElementById('reviews-container');
+    cont.innerHTML = data?.map(r => `<div style="background:#0d1b2a; padding:10px; margin-bottom:5px; border-radius:10px;"><b>${r.user_name}</b>: ${r.text}</div>`).join('') || 'Порожньо';
+    toggleModal('reviews-list-modal', true);
+}
+
 // --- КОШИК ---
 function addToCart(name, price) { cart.push({ name, price }); document.getElementById('cart-count').innerText = cart.length; }
 function removeFromCart(i) { cart.splice(i, 1); document.getElementById('cart-count').innerText = cart.length; renderCart(); }
@@ -234,7 +273,7 @@ function removeFromCart(i) { cart.splice(i, 1); document.getElementById('cart-co
 function renderCart() {
     const cont = document.getElementById('cart-items-list');
     const total = cart.reduce((sum, item) => sum + item.price, 0);
-    cont.innerHTML = cart.length ? cart.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.name}</span><span style="color:var(--red); cursor:pointer;" onclick="removeFromCart(${i})">❌ ${item.price}₴</span></div>`).join('') : 'Кошик порожній';
+    cont.innerHTML = cart.length ? cart.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.name}</span><span style="color:#ef4444; cursor:pointer;" onclick="removeFromCart(${i})">❌ ${item.price}₴</span></div>`).join('') : 'Кошик порожній';
     document.getElementById('cart-total').innerText = total;
 }
 
@@ -246,7 +285,7 @@ async function checkoutCart() {
     alert("Оплачено!"); cart = []; document.getElementById('cart-count').innerText = 0; toggleModal('cart-modal', false); refreshUserData();
 }
 
-// --- ДОПОМІЖНІ ---
+// --- СИСТЕМНІ ---
 async function refreshUserData() {
     if (!userData) return;
     const { data } = await supabaseClient.from('bank').select('*').eq('user_id', userData.user_id).single();
@@ -264,7 +303,7 @@ function buyCurrency() {
 function toggleModal(id, show) { if (id === 'cart-modal' && show) renderCart(); document.getElementById(id).classList.toggle('hidden', !show); }
 async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
 
-// --- ПРИВ'ЯЗКА ФУНКЦІЙ ДО WINDOW ---
+// --- ПРИВ'ЯЗКА ВСІХ ФУНКЦІЙ ДО WINDOW ---
 window.signIn = signIn; window.buyCurrency = buyCurrency; window.processOrder = processOrder;
 window.sendReview = sendReview; window.loadReviews = loadReviews; window.toggleModal = toggleModal;
 window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeFromCart = removeFromCart;
