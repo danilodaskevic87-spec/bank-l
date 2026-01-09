@@ -3,159 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Лісова Пісня</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --bg: #010811; --card: #05111f; --green: #2ecc71; --white: #fff; --blue: #3498db; --purple: #9b59b6; --gold: #f1c40f; --red: #e74c3c; --mono: #ff4c4c; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--white); margin: 0; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; }
-        .hidden { display: none !important; }
-        #forest-playground {
-    position: relative;
-    width: 100%;
-    min-height: 350px;
-    background: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1000') center/cover;
-    border-radius: 15px;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 15px;
-    padding: 20px;
-    box-sizing: border-box;
-    border: 3px solid #22c55e;
-}
-
-.forest-obj {
-    font-size: 35px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, filter 0.2s;
-    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
-}
-
-.forest-obj:hover {
-    transform: scale(1.4);
-}
-
-.forest-obj.found {
-    pointer-events: none;
-    filter: grayscale(1) opacity(0.5);
-}
-        .btn { width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--green); color: #000; font-size: 16px; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
-        .btn:disabled { background: #1e2d3d !important; color: #556677 !important; cursor: not-allowed; }
-        .btn-blue { background: var(--blue) !important; color: white !important; }
-        .btn-purple { background: var(--purple) !important; color: white !important; }
-        .btn-mono { background: var(--mono) !important; color: white !important; }
-        .btn-gray { background: #34495e !important; color: white !important; }
-        .btn-small { width: auto; padding: 8px 12px; font-size: 12px; margin: 0; }
-        .news-bar { background: linear-gradient(90deg, #1e2d3d, #05111f); padding: 12px; border-radius: 12px; border-left: 4px solid var(--gold); margin-bottom: 20px; font-size: 14px; }
-        .user-card { background: var(--card); padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #1e2d3d; margin-bottom: 20px; }
-        .balance { font-size: 38px; color: var(--green); font-weight: bold; margin: 10px 0; }
-        .rank-badge { font-size: 12px; color: var(--gold); text-transform: uppercase; margin-bottom: 5px; }
-        .section-header { font-size: 18px; margin: 25px 0 15px; font-weight: bold; border-left: 4px solid var(--green); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .service-row { display: flex; align-items: center; justify-content: space-between; background: #0d1b2a; padding: 10px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #1e2d3d; }
-        .modal { background: rgba(0,0,0,0.9); position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--green); max-height: 80vh; overflow-y: auto; }
-        .cart-float { position: fixed; bottom: 20px; right: 20px; background: var(--green); color: black; padding: 15px; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 99; font-weight: bold; }
-        input, textarea { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0a1625; color: white; box-sizing: border-box; font-size: 16px; }
-        .star-rating span { font-size: 30px; cursor: pointer; color: #333; }
-        .star-rating span.active { color: var(--gold); }
-    </style>
+    <title>Bank Forest App</title>
+    <link rel="stylesheet" href="style.css"> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div id="cart-btn" class="cart-float hidden" onclick="toggleModal('cart-modal', true)">🛒 <span id="cart-count">0</span></div>
-
-<div class="container">
     <div id="auth-screen">
-        <h2 style="text-align:center; margin-top: 40px;">🌲 Лісова Пісня</h2>
-        <input type="email" id="email-input" placeholder="Електронна пошта">
-        <input type="password" id="password-input" placeholder="Пароль">
-        <button class="btn" onclick="signIn()">УВІЙТИ</button>
+        <div class="auth-card">
+            <h1>🌲 Bank Forest</h1>
+            <input type="email" id="email-input" placeholder="Електронна пошта">
+            <input type="password" id="password-input" placeholder="Пароль">
+            <button class="btn" onclick="signIn()">УВІЙТИ</button>
+        </div>
     </div>
 
     <div id="main-app" class="hidden">
-        <div class="news-bar">📢 <b>Новини:</b> <span id="news-text">...</span></div>
-
-        <div class="user-card">
-            <div id="user-rank" class="rank-badge">НОВАЧОК</div>
-            <div style="font-size: 1.3rem; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px;">
-                <span id="user-name">...</span>
-                <span id="vip-icon" style="color:var(--gold); display:none;">⭐ VIP</span>
+        <header>
+            <div class="user-info">
+                <h2 id="user-name">Завантаження...</h2>
+                <p>Баланс: <span id="user-balance">0</span> 🌲 <span id="vip-icon" style="display:none;">💎 VIP</span></p>
+                <p>IDD: <span id="user-idd">0000</span> | Ранг: <span id="user-rank">...</span></p>
+                <p>Витрачено за весь час: <span id="user-spent">0</span> ₴</p>
             </div>
-            <div class="balance"><span id="user-balance">0</span> ₴</div>
-            <div style="color: #8899a6; font-size: 12px;">IDD: <span id="user-idd">...</span> | Витрачено: <span id="user-spent">0</span> ₴</div>
+            <button id="cart-btn" class="btn hidden" onclick="toggleModal('cart-modal', true)">🛒 <span id="cart-count">0</span></button>
+        </header>
+
+        <div class="news-banner">
+            <p>📢 Новини: <span id="news-text">Завантаження...</span></p>
         </div>
 
-        <button class="btn btn-blue" onclick="toggleModal('wheel-modal', true)">🎡 Колесо Фортуни</button>
-        <button class="btn" style="background: var(--gold); color: black;" onclick="usePromo()">🎁 АКТИВУВАТИ ПРОМОКОД</button>
-    <button class="btn" style="background: linear-gradient(135deg, #22c55e, #166534); color: white; font-weight: bold; border: 2px solid #fff;" onclick="startForestGame()">
-    🌲 ВІДВІДАТИ ЛІС (23 ₴)
-</button>
-        <div class="section-header">🪙 Купити Ліснички</div>
-        <div style="background: rgba(255, 76, 76, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--mono);">
-            <p style="margin:0 0 10px; font-size: 0.9rem;">Курс: <b id="current-rate">0.5</b> ₴ за 1 🌲</p>
-            <input type="number" id="exchange-amount" placeholder="Кількість лісничків">
-            <button class="btn btn-mono" onclick="buyCurrency()">ОПЛАТИТИ ЧЕРЕЗ MONOBANK</button>
+        <section class="actions">
+            <h3>🏦 Банківські операції</h3>
+            <div class="actions-grid">
+                <button class="btn btn-green" onclick="toggleModal('transfer-modal', true)">💸 ПЕРЕКАЗАТИ</button>
+                <button class="btn btn-blue" onclick="viewTransferRequests()">📩 ЗАПИТИ</button>
+                <button class="btn" onclick="usePromo()">🎫 ПРОМОКОД</button>
+                <button class="btn" onclick="toggleModal('exchange-modal', true)">💰 ПОПОВНИТИ</button>
+            </div>
+        </section>
+
+        <section class="games">
+            <h3>🎮 Розваги</h3>
+            <div class="actions-grid">
+                <button class="btn btn-purple" onclick="startForestGame()">🌲 ГРА "ЛІС" (23 🌲)</button>
+                <button class="btn btn-orange" onclick="spinWheel()">🎡 КОЛЕСО (15 ₴)</button>
+            </div>
+        </section>
+
+        <section class="shop">
+            <h3>🛒 Крамниця та Послуги</h3>
+            <p id="kz-status" style="color: #fbbf24; font-weight: bold;">Вільних місць: ...</p>
+            <div id="services-list"></div>
+            <h3>🛋️ Бронювання КЗ</h3>
+            <div id="kz-list"></div>
+        </section>
+
+        <footer style="margin-top: 20px;">
+            <button class="btn btn-small" onclick="toggleModal('review-modal', true)">⭐ ВІДГУК</button>
+            <button class="btn btn-small btn-blue" onclick="loadReviews()">📖 ЧИТАТИ ВІДГУКИ</button>
+            <button class="btn btn-small btn-red" onclick="signOut()">ВИЙТИ</button>
+        </footer>
+    </div>
+
+    <div id="transfer-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>💸 Переказ коштів</h2>
+            <input type="number" id="target-idd" placeholder="IDD отримувача">
+            <input type="number" id="transfer-amount" placeholder="Сума (🌲)">
+            <div style="display: grid; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-green" onclick="sendDirectTransfer()">МИТТЄВО ПЕРЕКАЗАТИ</button>
+                <button class="btn btn-blue" onclick="sendTransferRequest()">НАДІСЛАТИ ЗАПИТ</button>
+                <button class="btn btn-red" onclick="toggleModal('transfer-modal', false)">СКАСУВАТИ</button>
+            </div>
         </div>
-
-        <div class="section-header">💳 Фінанси</div>
-        <button class="btn btn-purple" onclick="toggleModal('transfer-modal', true)">📲 Надіслати запит</button>
-        <button class="btn btn-gray" onclick="viewTransferRequests()">📩 Вхідні запити</button>
-
-        <div class="section-header">🍽️ Послуги</div>
-        <div id="services-list"></div>
-
-        <div class="section-header">🔥 Кайф зона <span id="kz-status" style="color:var(--gold);">Вільних: ?</span></div>
-        <div id="kz-list"></div>
-
-        <div class="section-header">💬 Відгуки</div>
-        <button class="btn btn-blue" onclick="toggleModal('review-modal', true)">✍️ Написати відгук</button>
-        <button class="btn btn-gray" onclick="loadReviews()">📖 Переглянути всі</button>
-
-        <button class="btn btn-gray" style="margin-top: 30px;" onclick="signOut()">ВИЙТИ</button>
     </div>
-</div>
 
-<div id="cart-modal" class="modal hidden">
-    <div class="modal-content">
-        <h3>Мій Кошик</h3>
-        <div id="cart-items-list"></div>
-        <hr border="0" style="border-top:1px solid #333; margin:15px 0;">
-        <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:15px;">
-            <span>Разом:</span> <span id="cart-total">0</span> ₴
+    <div id="requests-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>📥 Вхідні запити</h2>
+            <div id="requests-container"></div>
+            <button class="btn btn-red" onclick="toggleModal('requests-list-modal', false)" style="width:100%; margin-top:10px;">ЗАКРИТИ</button>
         </div>
-        <button class="btn" onclick="checkoutCart()">КУПИТИ ВСЕ</button>
-        <button class="btn btn-gray" onclick="toggleModal('cart-modal', false)">ЗАКРИТИ</button>
     </div>
-</div>
 
-<div id="wheel-modal" class="modal hidden">
-    <div class="modal-content" style="text-align:center;">
-        <h3>🎡 Колесо Фортуни</h3>
-        <div id="wheel-result" style="font-size: 20px; margin: 20px 0; font-weight: bold;">?</div>
-        <button id="spin-btn" class="btn btn-purple" onclick="spinWheel()">КРУТИТИ</button>
-        <button class="btn btn-gray" onclick="toggleModal('wheel-modal', false)">ЗАКРИТИ</button>
-    </div>
-</div>
-<div id="review-modal" class="modal hidden">
-    <div class="modal-content">
-        <h3>Відгук</h3>
-        <div class="star-rating" id="star-input">
-            <span onclick="setRating(1)">⭐</span><span onclick="setRating(2)">⭐</span><span onclick="setRating(3)">⭐</span><span onclick="setRating(4)">⭐</span><span onclick="setRating(5)">⭐</span>
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🛒 Ваш Кошик</h2>
+            <div id="cart-items-list"></div>
+            <p>Разом: <span id="cart-total">0</span> 🌲</p>
+            <button class="btn btn-green" onclick="checkoutCart()" style="width:100%">ОПЛАТИТИ ВСЕ</button>
+            <button class="btn btn-red" onclick="toggleModal('cart-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
         </div>
-        <textarea id="review-text" style="height:80px; margin-top:10px;" placeholder="Текст відгуку..."></textarea>
-        <button class="btn" onclick="sendReview()">НАДІСЛАТИ</button>
-        <button class="btn btn-gray" onclick="toggleModal('review-modal', false)">ЗАКРИТИ</button>
     </div>
-</div>
 
-<div id="reviews-list-modal" class="modal hidden"><div class="modal-content"><h3>Відгуки</h3><div id="reviews-container"></div><button class="btn btn-gray" onclick="toggleModal('reviews-list-modal', false)">ЗАКРИТИ</button></div></div>
-<div id="transfer-modal" class="modal hidden"><div class="modal-content"><h3>Переказ</h3><input type="number" id="target-idd" placeholder="IDD"><input type="number" id="transfer-amount" placeholder="Сума"><button class="btn" onclick="sendTransferRequest()">НАДІСЛАТИ</button><button class="btn btn-gray" onclick="toggleModal('transfer-modal', false)">ЗАКРИТИ</button></div></div>
-<div id="requests-list-modal" class="modal hidden"><div class="modal-content"><h3>Запити</h3><div id="requests-container"></div><button class="btn btn-gray" onclick="toggleModal('requests-list-modal', false)">ЗАКРИТИ</button></div></div>
+    <div id="exchange-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>💰 Поповнити баланс</h2>
+            <p>Курс: <span id="current-rate">0.5</span> ₴ за 1 🌲</p>
+            <input type="number" id="exchange-amount" placeholder="Кількість 🌲">
+            <button class="btn btn-green" onclick="buyCurrency()" style="width:100%">ОПЛАТИТИ (MONOBANK)</button>
+            <button class="btn btn-red" onclick="toggleModal('exchange-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
+        </div>
+    </div>
 
-<script src="script.js"></script>
+    <div id="wheel-modal" class="modal hidden">
+        <div class="modal-content">
+            </div>
+        <button class="btn btn-red btn-close-game" onclick="toggleModal('wheel-modal', false)" style="width: 80%; margin: 10px auto; display: block;">ВИЙТИ</button>
+    </div>
+
+    <div id="review-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>⭐ Ваш відгук</h2>
+            <div id="star-input" style="font-size: 30px; cursor: pointer; text-align: center; margin-bottom: 10px;">
+                <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
+            </div>
+            <textarea id="review-text" placeholder="Напишіть щось..." style="width: 100%; height: 80px;"></textarea>
+            <button class="btn btn-green" onclick="sendReview()" style="width:100%">НАДІСЛАТИ</button>
+            <button class="btn btn-red" onclick="toggleModal('review-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="reviews-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>📖 Відгуки гравців</h2>
+            <div id="reviews-container" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-red" onclick="toggleModal('reviews-list-modal', false)" style="width:100%; margin-top:10px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
