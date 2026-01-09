@@ -195,7 +195,7 @@ async function spinWheel() {
     const btn = document.getElementById('spin-btn');
     btn.disabled = true;
     await supabaseClient.from('bank').update({ balance: userData.balance - 15 }).eq('user_id', userData.user_id);
-    const prizes = [0, 5, 20, 10, 0, 100, 0, 15, 50, 0]; 
+    const prizes = [8, 5, 20, 10, 0, 200, 0, 15, 50, 0,100]; 
     const win = prizes[Math.floor(Math.random() * prizes.length)];
     document.getElementById('wheel-result').innerText = "Крутимо...";
     setTimeout(async () => {
