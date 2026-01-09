@@ -19,8 +19,6 @@ const kzServices = [
     { n: '🕶️ Принести з кухні', p: 120 }
 ];
 
-
-
 async function signIn() {
     const email = document.getElementById('email-input').value;
     const password = document.getElementById('password-input').value;
@@ -40,6 +38,7 @@ async function signIn() {
         setInterval(refreshUserData, 5000);
         setInterval(refreshKzLimit, 10000);
     }
+} // <--- ДОДАНО ЗАКРИВАЮЧУ ДУЖКУ
 
 async function startForestGame() {
     if (userData.balance < 23) return alert("Недостатньо 🌲 (треба 23)");
@@ -50,14 +49,12 @@ async function startForestGame() {
     const playground = document.createElement('div');
     playground.id = 'forest-playground';
 
-    // Масив об'єктів: 10 кущів, 5 дерев, 5 хмаринок
     const items = [
         ...Array(10).fill('🌿'), 
         ...Array(5).fill('🌳'), 
         ...Array(5).fill('☁️')
     ];
     
-    // Перемішуємо їх випадково
     items.sort(() => Math.random() - 0.5);
 
     items.forEach(emoji => {
@@ -75,11 +72,9 @@ async function startForestGame() {
 async function clickForest(el) {
     if (el.classList.contains('found')) return;
     
-    // Списання 23 🌲 за вхід
     let balance = userData.balance - 23;
     await supabaseClient.from('bank').update({ balance: balance }).eq('user_id', userData.user_id);
 
-    // Шанс 50%
     if (Math.random() > 0.5) {
         const win = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
         await supabaseClient.from('bank').update({ balance: balance + win }).eq('user_id', userData.user_id);
@@ -92,11 +87,9 @@ async function clickForest(el) {
 
     el.classList.add('found');
     refreshUserData();
-    // Можна закрити вікно через 1 секунду після кліку
     setTimeout(() => toggleModal('wheel-modal', false), 1200);
 }
 
-window.startForestGame = startForestGame;
 function updateUI() {
     if (!userData) return;
     document.getElementById('user-name').innerText = userData.name;
@@ -166,7 +159,6 @@ async function spinWheel() {
     const btn = document.getElementById('spin-btn');
     btn.disabled = true;
     
-    // Списуємо 15 ₴ за спробу
     await supabaseClient.from('bank').update({ balance: userData.balance - 15 }).eq('user_id', userData.user_id);
     
     const prizes = [0, 5, 20, 10, 0, 100, 0, 15, 50, 0]; 
@@ -286,13 +278,9 @@ async function usePromo() {
     if (!updErr) {
         await supabaseClient.from('promo_codes').update({ is_active: false }).eq('id', data.id);
         alert(`✅ Нараховано +${data.reward} 🌲`);
-        // Викликаємо функцію оновлення балансу, яка вже є в твоєму коді
-        if (typeof refreshUserData === 'function') refreshUserData();
+        refreshUserData();
     }
 }
-
-// ЦЕ НАЙВАЖЛИВІШИЙ РЯДОК:
-window.usePromo = usePromo;
 
 function removeFromCart(i) { cart.splice(i, 1); document.getElementById('cart-count').innerText = cart.length; renderCart(); }
 
@@ -306,10 +294,12 @@ async function checkoutCart() {
 
 async function signOut() { await supabaseClient.auth.signOut(); location.reload(); }
 
+// ЕКСПОРТ ВСІХ ФУНКЦІЙ ДЛЯ HTML
 window.signIn = signIn; window.buyCurrency = buyCurrency; window.processOrder = processOrder;
 window.sendReview = sendReview; window.loadReviews = loadReviews; window.toggleModal = toggleModal;
 window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeFromCart = removeFromCart;
 window.spinWheel = spinWheel; window.setRating = setRating; window.signOut = signOut;
 window.sendTransferRequest = sendTransferRequest; window.viewTransferRequests = viewTransferRequests;
 window.confirmTransfer = confirmTransfer;
-window.activatePromo = activatePromo;
+window.usePromo = usePromo; // <--- ВИПРАВЛЕНО НАЗВУ
+window.startForestGame = startForestGame; // <--- ДОДАНО ГРУ
