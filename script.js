@@ -41,71 +41,62 @@ async function signIn() {
         setInterval(refreshKzLimit, 10000);
     }
 
-async function visitForest() {
-    // 1. Перевірка балансу (вартість входу 23 🌲)
-    if (userData.balance < 23) {
-        alert("Похід у ліс коштує 23 🌲. У вас недостатньо коштів!");
-        return;
-    }
+async function startForestGame() {
+    if (userData.balance < 23) return alert("Недостатньо 🌲 (треба 23)");
 
-    // 2. Вибір категорії
-    const category = prompt(
-        "Ви прийшли до лісу (Вхід: 23 🌲).\n" +
-        "Оберіть, де шукати:\n" +
-        "1 - Кущі (1-10 🌿)\n" +
-        "2 - Дерева (1-5 🌳)\n" +
-        "3 - Хмаринки (1-5 ☁️)"
-    );
-
-    if (!["1", "2", "3"].includes(category)) {
-        alert("Ви не обрали місце і повернулися назад.");
-        return;
-    }
-
-    // 3. Вибір конкретного об'єкта
-    let maxNum = category === "1" ? 10 : 5;
-    let objectName = category === "1" ? "кущ" : (category === "2" ? "дерево" : "хмаринку");
+    const modalBody = document.querySelector('#wheel-modal .modal-content');
+    modalBody.innerHTML = '<h2 style="color:white; text-shadow: 2px 2px 4px #000;">Знайди скарб у лісі!</h2>';
     
-    const choice = prompt(`Оберіть номер ${objectName} (від 1 до ${maxNum}):`);
-    const num = parseInt(choice);
+    const playground = document.createElement('div');
+    playground.id = 'forest-playground';
 
-    if (isNaN(num) || num < 1 || num > maxNum) {
-        alert("Ви вказали неправильний номер.");
-        return;
-    }
+    // Масив об'єктів: 10 кущів, 5 дерев, 5 хмаринок
+    const items = [
+        ...Array(10).fill('🌿'), 
+        ...Array(5).fill('🌳'), 
+        ...Array(5).fill('☁️')
+    ];
+    
+    // Перемішуємо їх випадково
+    items.sort(() => Math.random() - 0.5);
 
-    // 4. Списання оплати (23 🌲)
-    let currentBalance = userData.balance - 23;
-    await supabaseClient.from('bank').update({ balance: currentBalance }).eq('user_id', userData.user_id);
+    items.forEach(emoji => {
+        const div = document.createElement('div');
+        div.className = 'forest-obj';
+        div.innerText = emoji;
+        div.onclick = () => clickForest(div);
+        playground.appendChild(div);
+    });
 
-    // 5. Логіка виграшу (шанс 50%)
-    const isWin = Math.random() > 0.5;
+    modalBody.appendChild(playground);
+    toggleModal('wheel-modal', true);
+}
 
-    if (isWin) {
-        // Виграш від 3 до 30 🌲
-        const prize = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
-        
-        const { error } = await supabaseClient
-            .from('bank')
-            .update({ balance: currentBalance + prize })
-            .eq('user_id', userData.user_id);
+async function clickForest(el) {
+    if (el.classList.contains('found')) return;
+    
+    // Списання 23 🌲 за вхід
+    let balance = userData.balance - 23;
+    await supabaseClient.from('bank').update({ balance: balance }).eq('user_id', userData.user_id);
 
-        if (!error) {
-            alert(`🎉 Ви заглянули за ${objectName} №${num} і знайшли ${prize} 🌲!`);
-        }
+    // Шанс 50%
+    if (Math.random() > 0.5) {
+        const win = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
+        await supabaseClient.from('bank').update({ balance: balance + win }).eq('user_id', userData.user_id);
+        el.innerText = '💰';
+        alert(`🎉 Ти знайшов ${win} 🌲!`);
     } else {
-        alert(`🍃 Ви перевірили ${objectName} №${num}, але там порожньо. Можливо, пощастить наступного разу!`);
+        el.innerText = '❌';
+        alert("Тут порожньо...");
     }
 
-    // 6. Оновлення даних на екрані
+    el.classList.add('found');
     refreshUserData();
+    // Можна закрити вікно через 1 секунду після кліку
+    setTimeout(() => toggleModal('wheel-modal', false), 1200);
 }
 
-// Прив'язка функції до вікна
-window.visitForest = visitForest;
-    
-}
-
+window.startForestGame = startForestGame;
 function updateUI() {
     if (!userData) return;
     document.getElementById('user-name').innerText = userData.name;
