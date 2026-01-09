@@ -20,6 +20,31 @@ const kzServices = [
     { n: '🕶️ Принести з кухні', p: 120 }
 ];
 
+// --- ВІДНОВЛЕННЯ ПАРОЛЯ ЧЕРЕЗ GMAIL (СЛУХАЧ ПОДІЙ) ---
+// Цей блок має бути на самому початку, щоб спрацювати при завантаженні сторінки з пошти
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+        setTimeout(() => {
+            const newPassword = prompt("Встановіть новий пароль (мінімум 6 символів):");
+            if (newPassword && newPassword.length >= 6) {
+                updateUserPassword(newPassword);
+            } else {
+                alert("Дію скасовано або пароль занадто короткий.");
+            }
+        }, 800);
+    }
+});
+
+async function updateUserPassword(newPassword) {
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if (error) {
+        alert("Помилка оновлення: " + error.message);
+    } else {
+        alert("✅ Пароль успішно змінено! Тепер увійдіть.");
+        window.location.hash = ""; 
+    }
+}
+
 // --- ПІДГОТОВКА МОДАЛОК ---
 function prepareModal() {
     const modalBody = document.querySelector('#wheel-modal .modal-content');
@@ -48,6 +73,21 @@ async function signIn() {
         setInterval(refreshUserData, 5000);
         setInterval(refreshKzLimit, 10000);
         setInterval(loadNews, 30000);
+    }
+}
+
+async function forgotPassword() {
+    const email = document.getElementById('email-input').value;
+    if (!email) return alert("Введіть Email у поле вище, щоб отримати посилання.");
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href,
+    });
+
+    if (error) {
+        alert("Помилка: " + error.message);
+    } else {
+        alert("📧 Посилання надіслано! Перевірте Gmail (та папку Спам).");
     }
 }
 
@@ -249,3 +289,4 @@ window.startForestGame = startForestGame; window.spinWheel = spinWheel; window.t
 window.usePromo = usePromo; window.buyCurrency = buyCurrency; window.signOut = signOut;
 window.addToCart = addToCart; window.checkoutCart = checkoutCart; window.removeFromCart = removeFromCart;
 window.setRating = setRating; window.sendReview = sendReview; window.loadReviews = loadReviews; window.processOrder = processOrder;
+window.forgotPassword = forgotPassword;
