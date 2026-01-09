@@ -1,177 +1,21 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank Forest</title>
-    <style>
-        /* Основні стилі згідно з першим скріншотом */
-        body { background: #ffffff; color: #000000; font-family: sans-serif; padding: 20px; }
-        .hidden { display: none; }
-        
-        h1 { font-size: 28px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        h3 { font-size: 18px; margin-top: 25px; display: flex; align-items: center; gap: 8px; }
+<div id="user-stats">
+    <p>🆔 IDD: <span id="user-idd">...</span></p>
+    <p>💰 Баланс: <span id="user-balance">0</span> 🌲</p>
+    <p>🏅 Ранг: <span id="user-rank">...</span></p>
+</div>
 
-        /* Стиль кнопок (сірі з рамкою) */
-        .btn { 
-            background: #efefef; 
-            border: 1px solid #767676; 
-            padding: 4px 10px; 
-            cursor: pointer; 
-            font-size: 14px; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 5px;
-            margin: 2px;
-        }
-        .btn:hover { background: #e5e5e5; }
-        
-        input { padding: 4px; border: 1px solid #767676; margin-right: 5px; }
+<div id="main-actions">
+    <button onclick="openServices()">🛒 ПОСЛУГИ</button>
+    <button onclick="openKaifZone()">✨ КАЙФ ЗОНА</button>
+    <button onclick="openCart()">🛍 КОШИК</button>
+</div>
 
-        /* Модальні вікна (чорний фон + темний блок як на скріншотах 2-5) */
-        .modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,1); /* Повністю чорний фон навколо */
-            display: flex; justify-content: center; align-items: center; z-index: 1000; 
-        }
-        .modal-content { 
-            background: #1e293b; /* Темно-синій блок */
-            padding: 30px; 
-            border-radius: 12px; 
-            width: 350px; 
-            color: white; 
-            text-align: left;
-        }
-        .modal-content h3 { color: white; margin-top: 0; margin-bottom: 20px; font-size: 20px; }
-
-        /* Велика червона кнопка ЗАКРИТИ */
-        .btn-close-red { 
-            background: #f85149; 
-            color: white; 
-            border: none; 
-            padding: 12px; 
-            width: 100%; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            font-size: 16px;
-            cursor: pointer; 
-            margin-top: 20px;
-            text-transform: uppercase;
-        }
-        .btn-close-red:hover { background: #da3633; }
-
-        .service-row { margin: 10px 0; }
-        .orange-text { color: #facc15; font-weight: bold; }
-        .star { cursor: pointer; font-size: 24px; }
-    </style>
-</head>
-<body>
-
-    <div id="auth-screen">
-        <h1>🌲 Bank Forest</h1>
-        <div style="margin-bottom: 20px;">
-            <input type="email" id="email-input" placeholder="Електронна пошта">
-            <input type="password" id="password-input" placeholder="Пароль">
-            <button class="btn" onclick="signIn()">УВІЙТИ</button>
+<div id="forest-modal" class="hidden">
+    <span id="modal-icon">📦</span>
+    <h3 id="modal-title">Заголовок</h3>
+    
+    <div id="modal-content-body">
         </div>
-        <p><a href="#" onclick="forgotPassword()" style="font-size: 13px; color: #0000ee;">Забули пароль? (через Gmail)</a></p>
-    </div>
-
-    <div id="main-app" class="hidden">
-        <h2 id="user-name">Завантаження...</h2>
-        <p>Баланс: <span id="user-balance">0</span> 🌲 <span id="vip-icon" style="display:none;">💎</span></p>
-        <p>IDD: <span id="user-idd">0000</span> | Ранг: <span id="user-rank">...</span></p>
-        <p>Витрачено за весь час: <span id="user-spent">0</span> ₴</p>
-        
-        <button class="btn" id="cart-btn" onclick="toggleModal('cart-modal', true)">🛒 <span id="cart-count">0</span></button>
-        
-        <p>📢 Новини: <span id="news-text">Завантаження...</span></p>
-
-        <h3>🏦 Банківські операції</h3>
-        <button class="btn" onclick="toggleModal('transfer-modal', true)">💸 ПЕРЕКАЗАТИ</button>
-        <button class="btn" onclick="viewTransferRequests()">📩 ЗАПИТИ</button>
-        <button class="btn" onclick="usePromo()">🎫 ПРОМОКОД</button>
-        <button class="btn" onclick="toggleModal('exchange-modal', true)">💰 ПОПОВНИТИ</button>
-
-        <h3>🎮 Розваги</h3>
-        <button class="btn" onclick="startForestGame()">🌲 ГРА "ЛІС" (23 🌲)</button>
-        <button class="btn" onclick="spinWheel()">🎡 КОЛЕСО (15 ₴)</button>
-
-        <h3>🛒 Крамниця та Послуги</h3>
-        <div id="services-list"></div>
-
-        <p class="orange-text" id="kz-status">Вільних місць: ...</p>
-        
-        <h3>🏠 Бронювання КЗ</h3>
-        <div id="kz-list"></div>
-
-        <div style="margin-top: 30px; display: flex; gap: 5px;">
-            <button class="btn" onclick="toggleModal('review-modal', true)">⭐ ВІДГУК</button>
-            <button class="btn" onclick="loadReviews()">📖 ЧИТАТИ ВІДГУКИ</button>
-            <button class="btn" onclick="signOut()">ВИЙТИ</button>
-        </div>
-    </div>
-
-    <div id="requests-list-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>📩 Вхідні запити</h3>
-            <div id="requests-container"></div>
-            <button class="btn-close-red" onclick="toggleModal('requests-list-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <div id="reviews-list-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>📖 Відгуки гравців</h3>
-            <div id="reviews-container" style="max-height: 250px; overflow-y: auto;"></div>
-            <button class="btn-close-red" onclick="toggleModal('reviews-list-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <div id="transfer-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>💸 Переказ коштів</h3>
-            <input type="number" id="target-idd" placeholder="IDD отримувача" style="width: 100%; margin-bottom: 10px;">
-            <input type="number" id="transfer-amount" placeholder="Сума 🌲" style="width: 100%; margin-bottom: 15px;">
-            <button class="btn" style="width: 100%; margin: 5px 0;" onclick="sendDirectTransfer()">МИТТЄВО ПЕРЕКАЗАТИ</button>
-            <button class="btn" style="width: 100%; margin: 5px 0;" onclick="sendTransferRequest()">НАДІСЛАТИ ЗАПИТ</button>
-            <button class="btn-close-red" onclick="toggleModal('transfer-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <div id="cart-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>🛒 Кошик</h3>
-            <div id="cart-items-list" style="margin-bottom: 15px;"></div>
-            <p>Сума: <span id="cart-total">0</span> ₴</p>
-            <button class="btn" style="width: 100%;" onclick="checkoutCart()">ОПЛАТИТИ</button>
-            <button class="btn-close-red" onclick="toggleModal('cart-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <div id="wheel-modal" class="modal hidden">
-        <div class="modal-content">
-            <div id="game-ui-root"></div> <button class="btn-close-red" onclick="toggleModal('wheel-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <div id="review-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>⭐ Залишити відгук</h3>
-            <div id="star-input" style="text-align: center; margin-bottom: 15px;">
-                <span class="star" onclick="setRating(1)">☆</span>
-                <span class="star" onclick="setRating(2)">☆</span>
-                <span class="star" onclick="setRating(3)">☆</span>
-                <span class="star" onclick="setRating(4)">☆</span>
-                <span class="star" onclick="setRating(5)">☆</span>
-            </div>
-            <textarea id="review-text" style="width: 100%; height: 80px; margin-bottom: 10px;"></textarea>
-            <button class="btn" style="width: 100%;" onclick="sendReview()">НАДІСЛАТИ</button>
-            <button class="btn-close-red" onclick="toggleModal('review-modal', false)">ЗАКРИТИ</button>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    
+    <button onclick="closeModal()">ЗАКРИТИ</button>
+</div>
