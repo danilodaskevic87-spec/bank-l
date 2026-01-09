@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Лісова Пісня - Monobank Edition</title>
+    <title>Лісова Пісня</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #010811; --card: #05111f; --green: #2ecc71; --white: #fff; --blue: #3498db; --purple: #9b59b6; --gold: #f1c40f; --red: #e74c3c; --mono: #ff4c4c; }
@@ -91,8 +91,9 @@
 
         <button class="btn btn-blue" onclick="toggleModal('wheel-modal', true)">🎡 Колесо Фортуни</button>
         <button class="btn" style="background: var(--gold); color: black;" onclick="usePromo()">🎁 АКТИВУВАТИ ПРОМОКОД</button>
-        <button class="btn btn-blue" onclick="visitForest()">🌲 ВІДВІДАТИ ЛІС (23 ₴)</button>
-    
+    <button class="btn" style="background: linear-gradient(135deg, #22c55e, #166534); color: white; font-weight: bold; border: 2px solid #fff;" onclick="startForestGame()">
+    🌲 ВІДВІДАТИ ЛІС (23 ₴)
+</button>
         <div class="section-header">🪙 Купити Ліснички</div>
         <div style="background: rgba(255, 76, 76, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--mono);">
             <p style="margin:0 0 10px; font-size: 0.9rem;">Курс: <b id="current-rate">0.5</b> ₴ за 1 🌲</p>
