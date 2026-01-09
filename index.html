@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Forest</title>
     <style>
-        /* Стилі для виправлення вигляду */
         body { background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; line-height: 1.6; }
         .hidden { display: none; }
-        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px 2px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px 2px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-green { background: #22c55e; color: white; }
         .btn-blue { background: #3b82f6; color: white; }
         .btn-purple { background: #a855f7; color: white; }
         .btn-red { background: #ef4444; color: white; }
         .btn-orange { background: #f97316; color: white; }
+        .btn-small { padding: 5px 10px; font-size: 12px; }
         
-        input { background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; margin: 10px 0; }
+        input, textarea { background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; margin: 10px 0; }
         
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .modal-content { background: #1e293b; padding: 25px; border-radius: 15px; width: 90%; max-width: 450px; position: relative; }
+        .modal-content { background: #1e293b; padding: 25px; border-radius: 15px; width: 90%; max-width: 450px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         
         .card { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .service-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; }
         
-        #forest-playground { margin-top: 15px; border-radius: 10px; overflow: hidden; }
-        .forest-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; transition: 0.2s; }
-        .forest-item:hover { background: rgba(255,255,255,0.2); }
+        #cart-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; padding: 15px; border-radius: 50%; }
+        .star { cursor: pointer; font-size: 25px; color: white; }
     </style>
 </head>
 <body>
@@ -35,7 +35,10 @@
             <h2>🌲 Bank Forest</h2>
             <input type="email" id="email-input" placeholder="Електронна пошта">
             <input type="password" id="password-input" placeholder="Пароль">
-            <button class="btn btn-green" style="width: 100%;" onclick="signIn()">УВІЙТИ</button>
+            <button class="btn btn-green" style="width: 100%; justify-content: center;" onclick="signIn()">УВІЙТИ</button>
+            <p style="margin-top: 15px;">
+                <a href="#" onclick="forgotPassword()" style="color: #3b82f6; text-decoration: none; font-size: 14px;">Забули пароль? (Gmail)</a>
+            </p>
         </div>
     </div>
 
@@ -44,7 +47,8 @@
             <h2 id="user-name">Завантаження...</h2>
             <p>💰 Баланс: <span id="user-balance" style="color: #22c55e; font-weight: bold;">0</span> 🌲 <span id="vip-icon" style="display:none;">💎 VIP</span></p>
             <p>🆔 IDD: <span id="user-idd">0000</span> | 🏅 Ранг: <span id="user-rank">...</span></p>
-            <p>📊 Витрачено: <span id="user-spent">0</span> ₴</p>
+            <p>📊 Витрачено за весь час: <span id="user-spent">0</span> ₴</p>
+            <p>📢 Новини: <span id="news-text" style="color: #94a3b8;">Завантаження...</span></p>
         </div>
 
         <div class="card">
@@ -53,24 +57,39 @@
                 <button class="btn btn-green" onclick="toggleModal('transfer-modal', true)">💸 ПЕРЕКАЗАТИ</button>
                 <button class="btn btn-blue" onclick="viewTransferRequests()">📩 ЗАПИТИ</button>
                 <button class="btn btn-blue" onclick="usePromo()">🎫 ПРОМОКОД</button>
-                <button class="btn btn-blue" onclick="toggleModal('exchange-modal', true)">💰 ПОПОВНИТИ</button>
+                <button class="btn btn-orange" onclick="toggleModal('exchange-modal', true)">💰 ПОПОВНИТИ</button>
             </div>
         </div>
 
         <div class="card">
             <h3>🎮 Розваги</h3>
             <div class="actions-grid">
-                <button class="btn btn-purple" onclick="startForestGame()">🌲 ГРА "ЛІС"</button>
-                <button class="btn btn-orange" onclick="spinWheel()">🎡 КОЛЕСО</button>
+                <button class="btn btn-purple" onclick="startForestGame()">🌲 ГРА "ЛІС" (23 🌲)</button>
+                <button class="btn btn-orange" onclick="spinWheel()">🎡 КОЛЕСО (15 ₴)</button>
             </div>
         </div>
 
-        <div id="services-list" class="card">
-            <h3>🛒 Крамниця</h3>
-            </div>
+        <div class="card">
+            <h3>🛒 Крамниця та Послуги</h3>
+            <div id="services-list"></div>
+        </div>
 
-        <button class="btn btn-red" onclick="signOut()" style="width: 100%;">ВИЙТИ З АКАУНТУ</button>
+        <div class="card">
+            <h3>🏠 Бронювання КЗ</h3>
+            <p id="kz-status" style="color: #facc15;">Вільних місць: ...</p>
+            <div id="kz-list"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 50px;">
+            <button class="btn btn-blue" style="flex: 1;" onclick="toggleModal('review-modal', true)">⭐ ВІДГУК</button>
+            <button class="btn btn-blue" style="flex: 1;" onclick="loadReviews()">📖 ЧИТАТИ ВІДГУКИ</button>
+            <button class="btn btn-red" style="flex: 1;" onclick="signOut()">ВИЙТИ</button>
+        </div>
     </div>
+
+    <button id="cart-btn" class="btn btn-green hidden" onclick="toggleModal('cart-modal', true)">
+        🛒 <span id="cart-count">0</span>
+    </button>
 
     <div id="transfer-modal" class="modal hidden">
         <div class="modal-content">
@@ -83,18 +102,62 @@
         </div>
     </div>
 
+    <div id="requests-list-modal" class="modal hidden">
+        <div class="modal-content" style="text-align: center;">
+            <h3 style="display: flex; align-items: center; justify-content: center; gap: 10px;">📩 Вхідні запити</h3>
+            <div id="requests-container" style="margin: 20px 0; text-align: left;"></div>
+            <button class="btn btn-red" style="width:100%; padding: 15px;" onclick="toggleModal('requests-list-modal', false)">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="exchange-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>💰 Поповнити баланс</h3>
+            <p>Курс: <span id="current-rate">0.5</span> ₴ за 1 🌲</p>
+            <input type="number" id="exchange-amount" placeholder="Кількість 🌲" oninput="document.getElementById('exchange-total').innerText = (this.value * (userData.is_vip_user ? 0.3 : 0.5)).toFixed(2)">
+            <p>До оплати: <span id="exchange-total">0</span> ₴</p>
+            <button class="btn btn-green" style="width:100%" onclick="buyCurrency()">ПЕРЕЙТИ ДО ОПЛАТИ</button>
+            <button class="btn btn-red" style="width:100%" onclick="toggleModal('exchange-modal', false)">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>🛒 Ваш кошик</h3>
+            <div id="cart-items-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
+            <p>Разом: <span id="cart-total" style="font-weight: bold; color: #22c55e;">0</span> ₴</p>
+            <button class="btn btn-green" style="width:100%" onclick="checkoutCart()">ОПЛАТИТИ КОШИК</button>
+            <button class="btn btn-red" style="width:100%" onclick="toggleModal('cart-modal', false)">ЗАКРИТИ</button>
+        </div>
+    </div>
+
     <div id="wheel-modal" class="modal hidden">
         <div class="modal-content">
-            <div id="game-container"></div>
             <button class="btn btn-red" style="width:100%; margin-top: 15px;" onclick="toggleModal('wheel-modal', false)">ВИЙТИ</button>
         </div>
     </div>
 
-    <div id="requests-list-modal" class="modal hidden">
+    <div id="review-modal" class="modal hidden">
         <div class="modal-content">
-            <h3>📩 Вхідні запити</h3>
-            <div id="requests-container"></div>
-            <button class="btn btn-red" style="width:100%; margin-top: 10px;" onclick="toggleModal('requests-list-modal', false)">ЗАКРИТИ</button>
+            <h3>⭐ Залишити відгук</h3>
+            <div id="star-input" style="text-align: center; margin-bottom: 10px;">
+                <span class="star" onclick="setRating(1)">⭐</span>
+                <span class="star" onclick="setRating(2)">⭐</span>
+                <span class="star" onclick="setRating(3)">⭐</span>
+                <span class="star" onclick="setRating(4)">⭐</span>
+                <span class="star" onclick="setRating(5)">⭐</span>
+            </div>
+            <textarea id="review-text" placeholder="Ваші враження..."></textarea>
+            <button class="btn btn-green" style="width:100%" onclick="sendReview()">НАДІСЛАТИ</button>
+            <button class="btn btn-red" style="width:100%" onclick="toggleModal('review-modal', false)">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="reviews-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>📖 Відгуки гравців</h3>
+            <div id="reviews-container" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-red" style="width:100%; margin-top: 15px;" onclick="toggleModal('reviews-list-modal', false)">ЗАКРИТИ</button>
         </div>
     </div>
 
