@@ -1,21 +1,53 @@
-<div id="user-stats">
-    <p>🆔 IDD: <span id="user-idd">...</span></p>
-    <p>💰 Баланс: <span id="user-balance">0</span> 🌲</p>
-    <p>🏅 Ранг: <span id="user-rank">...</span></p>
-</div>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Forest - Чистий інтерфейс</title>
+    <style>
+        body { background: white; color: black; font-family: sans-serif; padding: 30px; line-height: 1.6; }
+        .hidden { display: none; }
+        
+        /* Кнопки та інпути */
+        .btn { background: #efefef; border: 1px solid #767676; padding: 6px 15px; cursor: pointer; font-size: 14px; }
+        input { border: 1px solid #767676; padding: 6px; margin-bottom: 10px; width: 220px; display: block; }
+        
+        /* Картки даних */
+        .data-card { border: 1px solid #eee; padding: 20px; margin-top: 20px; max-width: 400px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .news-section { background: #f9f9f9; border-left: 4px solid #22c55e; padding: 15px; margin-top: 20px; max-width: 400px; }
+        
+        b { color: #333; }
+    </style>
+</head>
+<body>
 
-<div id="main-actions">
-    <button onclick="openServices()">🛒 ПОСЛУГИ</button>
-    <button onclick="openKaifZone()">✨ КАЙФ ЗОНА</button>
-    <button onclick="openCart()">🛍 КОШИК</button>
-</div>
+    <div id="auth-screen">
+        <h1>🌲 Bank Forest</h1>
+        <input type="email" id="email-input" placeholder="Ваш Email">
+        <input type="password" id="password-input" placeholder="Ваш Пароль">
+        <button class="btn" onclick="signIn()">УВІЙТИ</button>
+    </div>
 
-<div id="forest-modal" class="hidden">
-    <span id="modal-icon">📦</span>
-    <h3 id="modal-title">Заголовок</h3>
-    
-    <div id="modal-content-body">
+    <div id="main-app" class="hidden">
+        <h2>Особистий кабінет</h2>
+        
+        <div class="data-card">
+            <p><b>🆔 IDD:</b> <span id="user-idd">...</span></p>
+            <p><b>💰 Баланс:</b> <span id="user-balance">0</span> 🌲</p>
+            <p><b>🏅 Ранг:</b> <span id="user-rank" style="color: #2563eb; font-weight: bold;">...</span></p>
+            <p><b>💸 Витрачено:</b> <span id="user-spent">0</span> ₴</p>
         </div>
-    
-    <button onclick="closeModal()">ЗАКРИТИ</button>
-</div>
+
+        <div class="news-section">
+            <strong>📢 Останні новини:</strong>
+            <p id="news-content" style="margin-top: 10px; font-style: italic;">Завантаження новин...</p>
+        </div>
+
+        <br>
+        <button class="btn" onclick="signOut()">ВИЙТИ З АККАУНТУ</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
