@@ -3,51 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank Forest - Чистий інтерфейс</title>
-    <style>
-        body { background: white; color: black; font-family: sans-serif; padding: 30px; line-height: 1.6; }
-        .hidden { display: none; }
-        
-        /* Кнопки та інпути */
-        .btn { background: #efefef; border: 1px solid #767676; padding: 6px 15px; cursor: pointer; font-size: 14px; }
-        input { border: 1px solid #767676; padding: 6px; margin-bottom: 10px; width: 220px; display: block; }
-        
-        /* Картки даних */
-        .data-card { border: 1px solid #eee; padding: 20px; margin-top: 20px; max-width: 400px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .news-section { background: #f9f9f9; border-left: 4px solid #22c55e; padding: 15px; margin-top: 20px; max-width: 400px; }
-        
-        b { color: #333; }
-    </style>
+    <title>Bank Forest App</title>
+    <link rel="stylesheet" href="style.css"> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <div id="auth-screen">
-        <h1>🌲 Bank Forest</h1>
-        <input type="email" id="email-input" placeholder="Ваш Email">
-        <input type="password" id="password-input" placeholder="Ваш Пароль">
-        <button class="btn" onclick="signIn()">УВІЙТИ</button>
+        <div class="auth-card">
+            <h1>🌲 Bank Forest</h1>
+            <input type="email" id="email-input" placeholder="Електронна пошта">
+            <input type="password" id="password-input" placeholder="Пароль">
+            <button class="btn" onclick="signIn()">УВІЙТИ</button>
+        </div>
     </div>
 
     <div id="main-app" class="hidden">
-        <h2>Особистий кабінет</h2>
-        
-        <div class="data-card">
-            <p><b>🆔 IDD:</b> <span id="user-idd">...</span></p>
-            <p><b>💰 Баланс:</b> <span id="user-balance">0</span> 🌲</p>
-            <p><b>🏅 Ранг:</b> <span id="user-rank" style="color: #2563eb; font-weight: bold;">...</span></p>
-            <p><b>💸 Витрачено:</b> <span id="user-spent">0</span> ₴</p>
+        <header>
+            <div class="user-info">
+                <h2 id="user-name">Завантаження...</h2>
+                <p>Баланс: <span id="user-balance">0</span> 🌲 <span id="vip-icon" style="display:none;">💎 VIP</span></p>
+                <p>IDD: <span id="user-idd">0000</span> | Ранг: <span id="user-rank">...</span></p>
+                <p>Витрачено за весь час: <span id="user-spent">0</span> ₴</p>
+            </div>
+            <button id="cart-btn" class="btn hidden" onclick="toggleModal('cart-modal', true)">🛒 <span id="cart-count">0</span></button>
+        </header>
+
+        <div class="news-banner">
+            <p>📢 Новини: <span id="news-text">Завантаження...</span></p>
         </div>
 
-        <div class="news-section">
-            <strong>📢 Останні новини:</strong>
-            <p id="news-content" style="margin-top: 10px; font-style: italic;">Завантаження новин...</p>
-        </div>
+        <section class="actions">
+            <h3>🏦 Банківські операції</h3>
+            <div class="actions-grid">
+                <button class="btn btn-green" onclick="toggleModal('transfer-modal', true)">💸 ПЕРЕКАЗАТИ</button>
+                <button class="btn btn-blue" onclick="viewTransferRequests()">📩 ЗАПИТИ</button>
+                <button class="btn" onclick="usePromo()">🎫 ПРОМОКОД</button>
+                <button class="btn" onclick="toggleModal('exchange-modal', true)">💰 ПОПОВНИТИ</button>
+            </div>
+        </section>
 
-        <br>
-        <button class="btn" onclick="signOut()">ВИЙТИ З АККАУНТУ</button>
+        <section class="games">
+            <h3>🎮 Розваги</h3>
+            <div class="actions-grid">
+                <button class="btn btn-purple" onclick="startForestGame()">🌲 ГРА "ЛІС" (23 🌲)</button>
+                <button class="btn btn-orange" onclick="spinWheel()">🎡 КОЛЕСО (15 ₴)</button>
+            </div>
+        </section>
+
+        <section class="shop">
+            <h3>🛒 Крамниця та Послуги</h3>
+            <p id="kz-status" style="color: #fbbf24; font-weight: bold;">Вільних місць: ...</p>
+            <div id="services-list"></div>
+            <h3>🛋️ Бронювання КЗ</h3>
+            <div id="kz-list"></div>
+        </section>
+
+        <footer style="margin-top: 20px;">
+            <button class="btn btn-small" onclick="toggleModal('review-modal', true)">⭐ ВІДГУК</button>
+            <button class="btn btn-small btn-blue" onclick="loadReviews()">📖 ЧИТАТИ ВІДГУКИ</button>
+            <button class="btn btn-small btn-red" onclick="signOut()">ВИЙТИ</button>
+        </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <div id="transfer-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>💸 Переказ коштів</h2>
+            <input type="number" id="target-idd" placeholder="IDD отримувача">
+            <input type="number" id="transfer-amount" placeholder="Сума (🌲)">
+            <div style="display: grid; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-green" onclick="sendDirectTransfer()">МИТТЄВО ПЕРЕКАЗАТИ</button>
+                <button class="btn btn-blue" onclick="sendTransferRequest()">НАДІСЛАТИ ЗАПИТ</button>
+                <button class="btn btn-red" onclick="toggleModal('transfer-modal', false)">СКАСУВАТИ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="requests-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>📥 Вхідні запити</h2>
+            <div id="requests-container"></div>
+            <button class="btn btn-red" onclick="toggleModal('requests-list-modal', false)" style="width:100%; margin-top:10px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🛒 Ваш Кошик</h2>
+            <div id="cart-items-list"></div>
+            <p>Разом: <span id="cart-total">0</span> 🌲</p>
+            <button class="btn btn-green" onclick="checkoutCart()" style="width:100%">ОПЛАТИТИ ВСЕ</button>
+            <button class="btn btn-red" onclick="toggleModal('cart-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="exchange-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>💰 Поповнити баланс</h2>
+            <p>Курс: <span id="current-rate">0.5</span> ₴ за 1 🌲</p>
+            <input type="number" id="exchange-amount" placeholder="Кількість 🌲">
+            <button class="btn btn-green" onclick="buyCurrency()" style="width:100%">ОПЛАТИТИ (MONOBANK)</button>
+            <button class="btn btn-red" onclick="toggleModal('exchange-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="wheel-modal" class="modal hidden">
+        <div class="modal-content">
+            </div>
+        <button class="btn btn-red btn-close-game" onclick="toggleModal('wheel-modal', false)" style="width: 80%; margin: 10px auto; display: block;">ВИЙТИ</button>
+    </div>
+
+    <div id="review-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>⭐ Ваш відгук</h2>
+            <div id="star-input" style="font-size: 30px; cursor: pointer; text-align: center; margin-bottom: 10px;">
+                <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
+            </div>
+            <textarea id="review-text" placeholder="Напишіть щось..." style="width: 100%; height: 80px;"></textarea>
+            <button class="btn btn-green" onclick="sendReview()" style="width:100%">НАДІСЛАТИ</button>
+            <button class="btn btn-red" onclick="toggleModal('review-modal', false)" style="width:100%; margin-top:5px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
+    <div id="reviews-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>📖 Відгуки гравців</h2>
+            <div id="reviews-container" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-red" onclick="toggleModal('reviews-list-modal', false)" style="width:100%; margin-top:10px;">ЗАКРИТИ</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
